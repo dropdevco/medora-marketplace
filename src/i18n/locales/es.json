@@ -4,17 +4,40 @@
     "forProviders": "Para Clínicas",
     "toggleTheme": "Cambiar tema",
     "switchToSpanish": "Cambiar a Español",
-    "switchToEnglish": "Switch to English"
+    "switchToEnglish": "Switch to English",
+    "languageGroup": "Idioma"
   },
   "search": {
-    "placeholder": "Busca por nombre de clínica o especialidad",
-    "clear": "Borrar búsqueda"
+    "placeholder": "Busca médicos, especialidades, servicios o código postal",
+    "clear": "Borrar búsqueda",
+    "kind": {
+      "specialty": "Especialidad",
+      "service": "Servicio",
+      "city": "Ciudad",
+      "postal": "Código postal",
+      "provider": "Médico",
+      "insurance": "Seguro"
+    },
+    "whatLabel": "Qué",
+    "whatPlaceholder": "Dentista, terapia, nombre de clínica",
+    "whereLabel": "Dónde",
+    "coverLabel": "Seguro",
+    "anywhere": "Ambos lados",
+    "anywhereHint": "El Paso y Ciudad Juárez",
+    "juarezHint": "Chihuahua, México",
+    "elPasoHint": "Texas, Estados Unidos",
+    "anyCover": "Cualquier seguro",
+    "coverCount": "{{count}} aseguradoras",
+    "zipLabel": "CP",
+    "zipApply": "Ir",
+    "submit": "Buscar",
+    "edit": "Editar tu búsqueda",
+    "allProviders": "Todos los proveedores"
   },
   "filters": {
     "providersFoundSuffix_one": "clínica",
     "providersFoundSuffix_other": "clínicas",
     "clearFilters": "Limpiar filtros",
-    "allSpecialties": "Todas",
     "moreTags": "+{{count}} más",
     "fewerTags": "Menos",
     "countryGroup": "Lado de la frontera",
@@ -26,7 +49,36 @@
     "rating3": "3+",
     "rating4": "4+",
     "rating45": "4.5+",
-    "providersFound": "<strong>{{count}}</strong> proveedores encontrados"
+    "filtersLabel": "Filtros",
+    "nearPostal": "Cerca de {{code}}",
+    "postalNoMatch": "Sin proveedores en {{code}}",
+    "radiusKm": "{{km}} km",
+    "radiusLabel": "Radio de búsqueda",
+    "clearPostal": "Quitar filtro de ubicación",
+    "specialtyGroup": "Especialidad",
+    "insuranceGroup": "Seguros aceptados",
+    "insuranceSearch": "Buscar aseguradora",
+    "noInsurers": "Ninguna aseguradora coincide",
+    "languageGroup": "Idioma",
+    "availabilityGroup": "Disponibilidad",
+    "bookable": "Cita en línea",
+    "verified": "Cédula verificada",
+    "priceGroup": "Precio",
+    "withPricing": "Publica precios",
+    "priceAny": "Cualquiera",
+    "priceNote": "Solo algunos proveedores publican precios. Al activarlo se ocultan los demás.",
+    "sortLabel": "Orden",
+    "sort": {
+      "relevance": "Relevancia",
+      "rating": "Mejor calificados",
+      "reviews": "Más reseñas",
+      "distance": "Más cercanos",
+      "price": "Menor precio"
+    },
+    "viewGroup": "Vista",
+    "ratingChip": "{{rating}}+ estrellas",
+    "showResults_one": "Ver {{count}} resultado",
+    "showResults_other": "Ver {{count}} resultados"
   },
   "map": {
     "loading": "Cargando clínicas",
@@ -38,7 +90,9 @@
     "findMe": "Encontrar mi ubicación",
     "clickForDetails": "Haz clic para ver todo",
     "previewMode": "Vista previa del mapa",
-    "previewHint": "Agrega VITE_GOOGLE_MAPS_API_KEY a .env.local para cargar el mapa en vivo."
+    "previewHint": "Agrega VITE_GOOGLE_MAPS_API_KEY a .env.local para cargar el mapa en vivo.",
+    "listShort": "Lista",
+    "mapShort": "Mapa"
   },
   "drawer": {
     "rating": "Calificación",
@@ -56,7 +110,11 @@
     "elPaso": "El Paso",
     "languageEN": "Inglés",
     "languageES": "Español",
-    "visitWebsite": "Visitar Sitio Web"
+    "visitWebsite": "Visitar Sitio Web",
+    "services": "Servicios y precios",
+    "servicesMore": "+{{count}} más",
+    "servicePriceFrom": "desde {{price}}",
+    "serviceDisclaimer": "Los precios son los publicados por el proveedor y pueden haber cambiado. Confirma antes de agendar."
   },
   "specialties": {
     "dentist": "Dentista",
@@ -150,5 +208,26 @@
     "ctaBannerSubtitle": "Ya hay pacientes buscando tu especialidad en tu ciudad. Asegúrate de que tu clínica sea lo que encuentren.",
     "ctaBannerBtn": "Registrarme gratis",
     "footer": "© {{year}} MedSociety · Salud en la frontera de El Paso y Juárez"
+  },
+  "languages": {
+    "en": "Inglés",
+    "es": "Español"
+  },
+  "card": {
+    "priceFrom": "Desde {{price}}"
+  },
+  "discover": {
+    "heroTitle": "Atención médica a ambos lados de la frontera",
+    "heroSubtitle": "Busca entre 4,000 clínicas y especialistas en El Paso y Ciudad Juárez. Compara calificaciones, precios publicados y seguros antes de llamar.",
+    "scrollBack": "Ver anteriores",
+    "scrollOn": "Ver más",
+    "dentistsJuarez": "Dentistas mejor calificados en Ciudad Juárez",
+    "primaryElPaso": "Medicina general en El Paso",
+    "publishedPrices": "Clinicas que publican sus precios",
+    "booksOnline": "Agenda en línea, sin llamar",
+    "womensHealth": "Salud de la mujer en la frontera",
+    "mentalHealth": "Psicólogos y psiquiatras",
+    "pediatrics": "Pediatras para toda la familia",
+    "aestheticJuarez": "Cirugía plástica en Ciudad Juárez"
   }
 }

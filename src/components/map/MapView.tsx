@@ -71,6 +71,12 @@ interface MapViewProps {
     allProviders: Provider[];
     selectedProvider: Provider | null;
     onProviderSelect: (p: Provider) => void;
+    /**
+     * The result card the cursor is currently over. Hovering a card lights up
+     * its pin, which is what turns two panels into one view — without it the
+     * list and the map are just two lists, and the map is the useless one.
+     */
+    hoveredId?: string | null;
 }
 
 interface Box { north: number; south: number; east: number; west: number }
@@ -96,7 +102,9 @@ function escapeHtml(s: string): string {
     ));
 }
 
-export function MapView({ providers, allProviders, selectedProvider, onProviderSelect }: MapViewProps) {
+export function MapView({
+    providers, allProviders, selectedProvider, onProviderSelect, hoveredId = null,
+}: MapViewProps) {
     const { t } = useTranslation();
     const containerRef = useRef<HTMLDivElement>(null);
     const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
@@ -114,6 +122,7 @@ export function MapView({ providers, allProviders, selectedProvider, onProviderS
     const providersByIdRef = useRef<Map<string, Provider>>(new Map());
     const onSelectRef = useRef(onProviderSelect);
     const selectedIdRef = useRef<string | null>(null);
+    const hoveredIdRef = useRef<string | null>(null);
     const overviewHtmlRef = useRef<(p: Provider) => string>(() => '');
 
     const providersById = useMemo(() => new Map(providers.map((p) => [p.id, p])), [providers]);
@@ -126,8 +135,15 @@ export function MapView({ providers, allProviders, selectedProvider, onProviderS
     const region = useMemo(() => boundsOf(allProviders), [allProviders]);
 
     // ── Marker icon builder ────────────────────────────────────────────────
-    const makeIcon = useCallback((provider: Provider, isSelected: boolean): google.maps.Symbol => {
-        const fill = isSelected
+    const makeIcon = useCallback((
+        provider: Provider,
+        isSelected: boolean,
+        isHovered = false,
+    ): google.maps.Symbol => {
+        // Hover borrows the selected colour but not its size, so passing the
+        // cursor down a list reads as a highlight rather than as fourteen
+        // separate selections.
+        const fill = isSelected || isHovered
             ? '#8a6410'
             : provider.promoted
                 ? '#c9a84c'
@@ -140,10 +156,27 @@ export function MapView({ providers, allProviders, selectedProvider, onProviderS
             fillColor: fill,
             fillOpacity: 1,
             strokeColor: '#ffffff',
-            strokeWeight: isSelected ? 4 : 2.5,
-            scale: isSelected ? 13 : provider.promoted ? 10 : 8,
+            strokeWeight: isSelected ? 4 : isHovered ? 3.5 : 2.5,
+            scale: isSelected ? 13 : isHovered ? 12 : provider.promoted ? 10 : 8,
         };
     }, []);
+
+    /**
+     * Repaint one marker from whatever it currently is. Selection and hover
+     * both flow through here so the two can never disagree about a pin — the
+     * bug being avoided is a hovered-then-selected marker reverting to its
+     * idle colour when the cursor leaves.
+     */
+    const restyle = useCallback((id: string | null) => {
+        if (!id) return;
+        const marker = markersRef.current.get('p' + id);
+        const provider = providersByIdRef.current.get(id);
+        if (!marker || !provider) return;
+        const isSelected = selectedIdRef.current === id;
+        const isHovered = hoveredIdRef.current === id;
+        marker.setIcon(makeIcon(provider, isSelected, isHovered));
+        marker.setZIndex(isSelected ? 999 : isHovered ? 998 : provider.promoted ? 50 : 1);
+    }, [makeIcon]);
 
     // ── Hover overview card ────────────────────────────────────────────────
     const overviewHtml = useCallback((p: Provider) => {
@@ -278,6 +311,23 @@ export function MapView({ providers, allProviders, selectedProvider, onProviderS
         );
         // Refit whenever the result set changes — that is the point of the filter.
     }, [mapInstance, providers, selectedProvider]);
+
+    // ── Container resize ───────────────────────────────────────────────────
+    /**
+     * The sidebar collapses to a rail, which changes the map's width without a
+     * window resize. Maps caches its container size, so tell it explicitly or it
+     * keeps painting at the old width with a blank strip down the side.
+     */
+    useEffect(() => {
+        const node = containerRef.current;
+        if (!mapInstance || !node || typeof ResizeObserver === 'undefined') return;
+
+        const observer = new ResizeObserver(() => {
+            google.maps.event.trigger(mapInstance, 'resize');
+        });
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [mapInstance]);
 
     // ── Theme listener ─────────────────────────────────────────────────────
     useEffect(() => {
@@ -421,11 +471,13 @@ export function MapView({ providers, allProviders, selectedProvider, onProviderS
                     const provider = providerId ? providersByIdRef.current.get(providerId) : undefined;
                     if (!provider) continue;
                     cellByKeyRef.current.set(key, { kind: 'provider', providerId: provider.id });
-                    marker.setIcon(makeIcon(provider, selectedIdRef.current === provider.id));
+                    const isSelected = selectedIdRef.current === provider.id;
+                    const isHovered = hoveredIdRef.current === provider.id;
+                    marker.setIcon(makeIcon(provider, isSelected, isHovered));
                     marker.setLabel(null);
                     marker.setTitle(provider.name);
                     marker.setZIndex(
-                        selectedIdRef.current === provider.id ? 999 : provider.promoted ? 50 : 1,
+                        isSelected ? 999 : isHovered ? 998 : provider.promoted ? 50 : 1,
                     );
                 }
             }
@@ -453,18 +505,26 @@ export function MapView({ providers, allProviders, selectedProvider, onProviderS
         if (previousId === nextId) return;
         selectedIdRef.current = nextId;
 
-        const restyle = (id: string | null, isSelected: boolean) => {
-            if (!id) return;
-            const marker = markersRef.current.get('p' + id);
-            const provider = providersByIdRef.current.get(id);
-            if (!marker || !provider) return;
-            marker.setIcon(makeIcon(provider, isSelected));
-            marker.setZIndex(isSelected ? 999 : provider.promoted ? 50 : 1);
-        };
+        restyle(previousId);
+        restyle(nextId);
+    }, [selectedProvider, restyle]);
 
-        restyle(previousId, false);
-        restyle(nextId, true);
-    }, [selectedProvider, makeIcon]);
+    // ── Hover styling ──────────────────────────────────────────────────────
+    /**
+     * The bridge between the list and the map. Only the two affected markers
+     * are touched — restyling all of them on every mouse move made moving down
+     * a list of results feel like dragging.
+     *
+     * A provider still folded into a cluster has no marker of its own; nothing
+     * lights up, and that is correct. Zooming in is what splits the cluster.
+     */
+    useEffect(() => {
+        const previousId = hoveredIdRef.current;
+        if (previousId === hoveredId) return;
+        hoveredIdRef.current = hoveredId;
+        restyle(previousId);
+        restyle(hoveredId);
+    }, [hoveredId, restyle]);
     // ── Pan to selected ────────────────────────────────────────────────────
     useEffect(() => {
         if (!mapInstance || !selectedProvider) return;

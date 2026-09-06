@@ -1,0 +1,439 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { ProviderFilters, Specialty, Country } from '../../types/provider';
+import { suggest, type Suggestion, type SuggestVocabulary } from '../../utils/facets';
+import { fold } from '../../utils/search';
+import { isPostalQuery } from '../../utils/geo';
+import {
+    IconSearch, IconClose, IconMapPin, IconStar, IconShield,
+    IconCheck, SpecialtyIcon,
+} from '../icons/Icons';
+
+/** What the hero is holding before the user commits it. */
+interface Draft {
+    text: string;
+    specialty: Specialty[];
+    country: Country | '';
+    postalCode: string;
+    insurances: string[];
+}
+
+interface SearchHeroProps {
+    filters: ProviderFilters;
+    vocabulary: SuggestVocabulary;
+    /** Every insurer we hold, most common first. Feeds the third segment. */
+    insurers: string[];
+    /** Commits the draft as a filter patch — this is what runs the search. */
+    onSubmit: (patch: Partial<ProviderFilters>) => void;
+    /** A provider picked straight from autocomplete skips the results list. */
+    onProvider: (id: string) => void;
+    /** Focus the query field on mount — used when the header pill expands. */
+    autoFocus?: boolean;
+}
+
+type Segment = 'what' | 'where' | 'cover' | null;
+
+function draftFrom(f: ProviderFilters): Draft {
+    return {
+        text: f.search,
+        specialty: f.specialty,
+        country: f.country,
+        postalCode: f.postalCode,
+        insurances: f.insurances,
+    };
+}
+
+/**
+ * The search box, and the whole point of the redesign.
+ *
+ * Three segments, in the order a patient actually thinks: *what* is wrong,
+ * *where* they can get to, and *what their cover pays for*. Nothing runs until
+ * they press search — a half-built query that reloads the results on every
+ * keystroke is why the old page had to open on a map, because there was never
+ * a moment where the user had finished saying what they wanted.
+ */
+export function SearchHero({
+    filters, vocabulary, insurers, onSubmit, onProvider, autoFocus,
+}: SearchHeroProps) {
+    const { t } = useTranslation();
+    const [draft, setDraft] = useState<Draft>(() => draftFrom(filters));
+    const [open, setOpen] = useState<Segment>(null);
+    const [active, setActive] = useState(-1);
+    const wrapRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // Adopt filter changes made elsewhere — a removed chip, the back button, a
+    // shared link. Compared against the filters we were built from rather than
+    // synced in an effect, so the box never paints a stale query first.
+    const [seen, setSeen] = useState(filters);
+    if (filters !== seen) {
+        setSeen(filters);
+        setDraft(draftFrom(filters));
+    }
+
+    useEffect(() => {
+        if (autoFocus) inputRef.current?.focus();
+    }, [autoFocus]);
+
+    useEffect(() => {
+        if (!open) return;
+        const onDown = (e: MouseEvent) => {
+            if (!wrapRef.current?.contains(e.target as Node)) setOpen(null);
+        };
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(null); };
+        document.addEventListener('mousedown', onDown);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [open]);
+
+    const suggestions = useMemo(
+        () => (open === 'what' ? suggest(vocabulary, draft.text) : []),
+        [open, draft.text, vocabulary],
+    );
+
+    const patch = (p: Partial<Draft>) => setDraft((d) => ({ ...d, ...p }));
+
+    const submit = (override?: Partial<Draft>) => {
+        const d = { ...draft, ...override };
+        setOpen(null);
+        // A bare five-digit query is a location, not a name. Committing it as
+        // text as well would AND a literal digit match onto the radius and
+        // return nothing.
+        const asPostal = isPostalQuery(d.text);
+        onSubmit({
+            search: asPostal ? '' : d.text.trim(),
+            specialty: d.specialty,
+            country: d.country,
+            postalCode: asPostal ? d.text.trim() : d.postalCode,
+            insurances: d.insurances,
+        });
+    };
+
+    /**
+     * A suggestion is a filter, not more text. Picking "Dentist" should narrow
+     * the directory; leaving the word in the box would additionally demand that
+     * clinics spell it out, and quietly drop the ones that don't.
+     */
+    const pick = (s: Suggestion) => {
+        setActive(-1);
+        switch (s.kind) {
+            case 'specialty':
+                submit({ text: '', specialty: [...new Set([...draft.specialty, s.value as Specialty])] });
+                break;
+            case 'city':
+                submit({ text: '', country: s.value as Country });
+                break;
+            case 'postal':
+                submit({ text: '', postalCode: s.value });
+                break;
+            case 'insurance':
+                submit({ text: '', insurances: [...new Set([...draft.insurances, s.value])] });
+                break;
+            case 'provider':
+                setOpen(null);
+                onProvider(s.value);
+                break;
+            case 'service':
+                submit({ text: s.label });
+                break;
+        }
+    };
+
+    const onKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            if (!suggestions.length) return;
+            e.preventDefault();
+            const dir = e.key === 'ArrowDown' ? 1 : -1;
+            const span = suggestions.length + 1; // the list, plus "nothing selected"
+            setActive((i) => (((i + 1 + dir) % span) + span) % span - 1);
+            return;
+        }
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (active >= 0 && suggestions[active]) pick(suggestions[active]);
+            else submit();
+        }
+    };
+
+    const whereLabel = draft.postalCode
+        ? t('filters.nearPostal', { code: draft.postalCode })
+        : draft.country === 'MX' ? t('filters.juarez')
+            : draft.country === 'US' ? t('filters.elPaso')
+                : t('search.anywhere');
+
+    const coverLabel = draft.insurances.length === 0
+        ? t('search.anyCover')
+        : draft.insurances.length === 1
+            ? draft.insurances[0]
+            : t('search.coverCount', { count: draft.insurances.length });
+
+    return (
+        <div ref={wrapRef} className="ms-hero-wrap">
+            <div className={`ms-hero${open ? ' is-open' : ''}`} role="search">
+                {/* ── What ── */}
+                <div
+                    className={`ms-seg ms-seg-what${open === 'what' ? ' is-active' : ''}`}
+                    onClick={() => { setOpen('what'); inputRef.current?.focus(); }}
+                >
+                    <label className="ms-seg-label" htmlFor="ms-hero-q">{t('search.whatLabel')}</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <input
+                            id="ms-hero-q"
+                            ref={inputRef}
+                            type="text"
+                            role="combobox"
+                            aria-expanded={open === 'what' && suggestions.length > 0}
+                            aria-controls="ms-hero-suggestions"
+                            aria-autocomplete="list"
+                            autoComplete="off"
+                            className="ms-seg-input"
+                            placeholder={t('search.whatPlaceholder')}
+                            value={draft.text}
+                            onChange={(e) => { patch({ text: e.target.value }); setOpen('what'); setActive(-1); }}
+                            onKeyDown={onKeyDown}
+                        />
+                        {draft.text && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); patch({ text: '' }); inputRef.current?.focus(); }}
+                                aria-label={t('search.clear')}
+                                className="ms-seg-clear"
+                            >
+                                <IconClose size={14} weight={2.2} />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Specialties picked from autocomplete live here, not in the
+                        box — they are filters now, and the box is free for the
+                        next word. */}
+                    {draft.specialty.length > 0 && (
+                        <div className="ms-seg-tags">
+                            {draft.specialty.map((s) => (
+                                <MiniChip
+                                    key={s}
+                                    label={t(`specialties.${s}`)}
+                                    onRemove={() => patch({ specialty: draft.specialty.filter((x) => x !== s) })}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {open === 'what' && suggestions.length > 0 && (
+                        <ul id="ms-hero-suggestions" role="listbox" className="ms-pop ms-pop-what">
+                            {suggestions.map((s, i) => (
+                                <li key={`${s.kind}:${s.value}`} role="option" aria-selected={i === active}>
+                                    <button
+                                        onMouseEnter={() => setActive(i)}
+                                        onClick={(e) => { e.stopPropagation(); pick(s); }}
+                                        className={`ms-pop-row${i === active ? ' is-active' : ''}`}
+                                    >
+                                        <SuggestionIcon s={s} />
+                                        <span className="ms-pop-label">{s.label}</span>
+                                        <span className="ms-pop-meta">
+                                            {t(`search.kind.${s.kind}`, { defaultValue: '' })}
+                                            {s.count ? ` · ${s.count.toLocaleString()}` : ''}
+                                        </span>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+
+                <span className="ms-seg-divider" aria-hidden="true" />
+
+                {/* ── Where ── */}
+                <div
+                    className={`ms-seg ms-seg-where${open === 'where' ? ' is-active' : ''}`}
+                    onClick={() => setOpen(open === 'where' ? null : 'where')}
+                >
+                    <span className="ms-seg-label">{t('search.whereLabel')}</span>
+                    <span className={`ms-seg-value${draft.country || draft.postalCode ? '' : ' is-empty'}`}>
+                        {whereLabel}
+                    </span>
+
+                    {open === 'where' && (
+                        <WherePopover
+                            draft={draft}
+                            onPick={(p) => { patch(p); setOpen(null); }}
+                        />
+                    )}
+                </div>
+
+                <span className="ms-seg-divider" aria-hidden="true" />
+
+                {/* ── Cover ── */}
+                <div
+                    className={`ms-seg ms-seg-cover${open === 'cover' ? ' is-active' : ''}`}
+                    onClick={() => setOpen(open === 'cover' ? null : 'cover')}
+                >
+                    <span className="ms-seg-label">{t('search.coverLabel')}</span>
+                    <span className={`ms-seg-value${draft.insurances.length ? '' : ' is-empty'}`}>
+                        {coverLabel}
+                    </span>
+
+                    {open === 'cover' && (
+                        <CoverPopover
+                            insurers={insurers}
+                            selected={draft.insurances}
+                            onToggle={(name) => patch({
+                                insurances: draft.insurances.includes(name)
+                                    ? draft.insurances.filter((x) => x !== name)
+                                    : [...draft.insurances, name],
+                            })}
+                            onClear={() => patch({ insurances: [] })}
+                        />
+                    )}
+                </div>
+
+                <button
+                    onClick={() => submit()}
+                    className="ms-hero-go press"
+                    aria-label={t('search.submit')}
+                >
+                    <IconSearch size={19} weight={2.4} />
+                    <span className="ms-hero-go-text">{t('search.submit')}</span>
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function WherePopover({ draft, onPick }: {
+    draft: Draft; onPick: (p: Partial<Draft>) => void;
+}) {
+    const { t } = useTranslation();
+    const [zip, setZip] = useState(draft.postalCode);
+
+    const options: { value: Country | ''; label: string; hint: string }[] = [
+        { value: '', label: t('search.anywhere'), hint: t('search.anywhereHint') },
+        { value: 'MX', label: t('drawer.ciudadJuarez'), hint: t('search.juarezHint') },
+        { value: 'US', label: t('drawer.elPaso'), hint: t('search.elPasoHint') },
+    ];
+
+    return (
+        <div className="ms-pop ms-pop-where" onClick={(e) => e.stopPropagation()}>
+            {options.map((o) => (
+                <button
+                    key={o.value || 'any'}
+                    onClick={() => onPick({ country: o.value, postalCode: '' })}
+                    className={`ms-pop-row${draft.country === o.value && !draft.postalCode ? ' is-chosen' : ''}`}
+                >
+                    <span className="ms-pop-ico"><IconMapPin size={16} /></span>
+                    <span className="ms-pop-label">
+                        <strong>{o.label}</strong>
+                        <em>{o.hint}</em>
+                    </span>
+                    {draft.country === o.value && !draft.postalCode && (
+                        <span className="ms-pop-meta"><IconCheck size={15} weight={2.4} /></span>
+                    )}
+                </button>
+            ))}
+
+            <div className="ms-pop-sep" />
+
+            <form
+                onSubmit={(e) => { e.preventDefault(); if (isPostalQuery(zip)) onPick({ postalCode: zip.trim() }); }}
+                className="ms-pop-zip"
+            >
+                <label htmlFor="ms-hero-zip">{t('search.zipLabel')}</label>
+                <input
+                    id="ms-hero-zip"
+                    inputMode="numeric"
+                    maxLength={5}
+                    placeholder="32000"
+                    value={zip}
+                    onChange={(e) => setZip(e.target.value.replace(/\D/g, ''))}
+                />
+                <button type="submit" disabled={!isPostalQuery(zip)}>
+                    {t('search.zipApply')}
+                </button>
+            </form>
+        </div>
+    );
+}
+
+/** How many insurers fit before the list stops being a list. */
+const COVER_SHOWN = 8;
+
+function CoverPopover({ insurers, selected, onToggle, onClear }: {
+    insurers: string[]; selected: string[];
+    onToggle: (name: string) => void; onClear: () => void;
+}) {
+    const { t } = useTranslation();
+    const [query, setQuery] = useState('');
+
+    const shown = useMemo(() => {
+        const q = fold(query.trim());
+        const matched = q ? insurers.filter((n) => fold(n).includes(q)) : insurers;
+        // A selected insurer always renders, or the search box can hide the
+        // very filter the user is trying to switch off.
+        return [...new Set([...selected, ...matched])].slice(0, COVER_SHOWN + selected.length);
+    }, [insurers, query, selected]);
+
+    return (
+        <div className="ms-pop ms-pop-cover" onClick={(e) => e.stopPropagation()}>
+            <div className="ms-pop-search">
+                <IconShield size={15} />
+                <input
+                    autoFocus
+                    placeholder={t('filters.insuranceSearch')}
+                    aria-label={t('filters.insuranceSearch')}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                />
+            </div>
+
+            <button onClick={onClear} className={`ms-pop-row${selected.length === 0 ? ' is-chosen' : ''}`}>
+                <span className="ms-pop-label"><strong>{t('search.anyCover')}</strong></span>
+                {selected.length === 0 && (
+                    <span className="ms-pop-meta"><IconCheck size={15} weight={2.4} /></span>
+                )}
+            </button>
+
+            {shown.map((name) => (
+                <button
+                    key={name}
+                    onClick={() => onToggle(name)}
+                    className={`ms-pop-row${selected.includes(name) ? ' is-chosen' : ''}`}
+                >
+                    <span className="ms-pop-label"><strong>{name}</strong></span>
+                    {selected.includes(name) && (
+                        <span className="ms-pop-meta"><IconCheck size={15} weight={2.4} /></span>
+                    )}
+                </button>
+            ))}
+
+            {shown.length === 0 && (
+                <p className="ms-pop-empty">{t('filters.noInsurers')}</p>
+            )}
+        </div>
+    );
+}
+
+function MiniChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+    return (
+        <span className="ms-mini-chip">
+            {label}
+            <button
+                onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                aria-label={`Remove ${label}`}
+            >
+                <IconClose size={11} weight={2.4} />
+            </button>
+        </span>
+    );
+}
+
+function SuggestionIcon({ s }: { s: Suggestion }) {
+    const inner =
+        s.kind === 'specialty' ? <SpecialtyIcon specialty={s.value as Specialty} size={16} />
+            : s.kind === 'city' || s.kind === 'postal' ? <IconMapPin size={16} />
+                : s.kind === 'provider' ? <IconStar size={16} />
+                    : s.kind === 'insurance' ? <IconShield size={16} />
+                        : <IconSearch size={16} />;
+    return <span className="ms-pop-ico">{inner}</span>;
+}

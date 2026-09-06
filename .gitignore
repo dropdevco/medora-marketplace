@@ -38,5 +38,8 @@ scripts/.cache
 scripts/doctoralia/.cache
 scripts/doctoralia/out
 
+# Supabase CLI local state
+supabase/.temp
+
 # Claude Code local runtime state
 .claude/scheduled_tasks.lock

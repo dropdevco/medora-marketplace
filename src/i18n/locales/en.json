@@ -4,17 +4,40 @@
     "forProviders": "For Providers",
     "toggleTheme": "Toggle theme",
     "switchToSpanish": "Cambiar a Español",
-    "switchToEnglish": "Switch to English"
+    "switchToEnglish": "Switch to English",
+    "languageGroup": "Language"
   },
   "search": {
-    "placeholder": "Search by clinic name or specialty",
-    "clear": "Clear search"
+    "placeholder": "Search doctors, specialties, services or ZIP",
+    "clear": "Clear search",
+    "kind": {
+      "specialty": "Specialty",
+      "service": "Service",
+      "city": "City",
+      "postal": "ZIP",
+      "provider": "Provider",
+      "insurance": "Insurance"
+    },
+    "whatLabel": "What",
+    "whatPlaceholder": "Dentist, therapy, a clinic name",
+    "whereLabel": "Where",
+    "coverLabel": "Insurance",
+    "anywhere": "Both sides",
+    "anywhereHint": "El Paso and Ciudad Juárez",
+    "juarezHint": "Chihuahua, Mexico",
+    "elPasoHint": "Texas, United States",
+    "anyCover": "Any insurance",
+    "coverCount": "{{count}} insurers",
+    "zipLabel": "ZIP",
+    "zipApply": "Go",
+    "submit": "Search",
+    "edit": "Edit your search",
+    "allProviders": "All providers"
   },
   "filters": {
     "providersFoundSuffix_one": "provider",
     "providersFoundSuffix_other": "providers",
     "clearFilters": "Clear filters",
-    "allSpecialties": "All",
     "moreTags": "+{{count}} more",
     "fewerTags": "Fewer",
     "countryGroup": "Which side of the border",
@@ -26,7 +49,36 @@
     "rating3": "3+",
     "rating4": "4+",
     "rating45": "4.5+",
-    "providersFound": "<strong>{{count}}</strong> providers found"
+    "filtersLabel": "Filters",
+    "nearPostal": "Near {{code}}",
+    "postalNoMatch": "No providers in {{code}}",
+    "radiusKm": "{{km}} km",
+    "radiusLabel": "Search radius",
+    "clearPostal": "Clear location filter",
+    "specialtyGroup": "Specialty",
+    "insuranceGroup": "Insurance accepted",
+    "insuranceSearch": "Find an insurer",
+    "noInsurers": "No insurers match",
+    "languageGroup": "Language",
+    "availabilityGroup": "Availability",
+    "bookable": "Books online",
+    "verified": "Verified credentials",
+    "priceGroup": "Price",
+    "withPricing": "Publishes prices",
+    "priceAny": "Any",
+    "priceNote": "Only some providers publish prices. Turning this on hides the rest.",
+    "sortLabel": "Sort",
+    "sort": {
+      "relevance": "Relevance",
+      "rating": "Top rated",
+      "reviews": "Most reviewed",
+      "distance": "Nearest",
+      "price": "Lowest price"
+    },
+    "viewGroup": "View",
+    "ratingChip": "{{rating}}+ stars",
+    "showResults_one": "Show {{count}} result",
+    "showResults_other": "Show {{count}} results"
   },
   "map": {
     "loading": "Loading clinics",
@@ -38,7 +90,9 @@
     "findMe": "Find my location",
     "clickForDetails": "Click for full details",
     "previewMode": "Map preview mode",
-    "previewHint": "Add VITE_GOOGLE_MAPS_API_KEY to .env.local to load the live map."
+    "previewHint": "Add VITE_GOOGLE_MAPS_API_KEY to .env.local to load the live map.",
+    "listShort": "List",
+    "mapShort": "Map"
   },
   "drawer": {
     "rating": "Rating",
@@ -56,7 +110,11 @@
     "elPaso": "El Paso",
     "languageEN": "English",
     "languageES": "Spanish",
-    "visitWebsite": "Visit Website"
+    "visitWebsite": "Visit Website",
+    "services": "Services & prices",
+    "servicesMore": "+{{count}} more",
+    "servicePriceFrom": "from {{price}}",
+    "serviceDisclaimer": "Prices are as published by the provider and may have changed. Confirm before booking."
   },
   "specialties": {
     "dentist": "Dentist",
@@ -150,5 +208,26 @@
     "ctaBannerSubtitle": "Patients are already searching your specialty in your city. Make sure your clinic is what they find.",
     "ctaBannerBtn": "Get listed free",
     "footer": "© {{year}} MedSociety · Healthcare across the El Paso and Juárez border"
+  },
+  "languages": {
+    "en": "English",
+    "es": "Spanish"
+  },
+  "card": {
+    "priceFrom": "From {{price}}"
+  },
+  "discover": {
+    "heroTitle": "Care on both sides of the border",
+    "heroSubtitle": "Search 4,000 clinics and specialists across El Paso and Ciudad Juárez. Compare ratings, published prices and insurance before you call.",
+    "scrollBack": "Show previous",
+    "scrollOn": "Show more",
+    "dentistsJuarez": "Top-rated dentists in Ciudad Juárez",
+    "primaryElPaso": "Primary care in El Paso",
+    "publishedPrices": "Clinics that publish their prices",
+    "booksOnline": "Book online, no phone call",
+    "womensHealth": "Women's health across the border",
+    "mentalHealth": "Therapists and psychiatrists",
+    "pediatrics": "Pediatricians for the whole family",
+    "aestheticJuarez": "Plastic surgery in Ciudad Juárez"
   }
 }

@@ -1,16 +1,17 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { Provider, ProviderFilters } from '../types/provider';
+import type { Provider, ProviderFilters, Specialty, SortMode } from '../types/provider';
 import { SpecialtyLabels } from '../types/provider';
 import { supabase } from '../lib/supabase';
 import { mockProviders } from '../data/providers';
+import { DEFAULT_RADIUS_KM } from '../utils/geo';
+import { buildSearchIndex, tokenize } from '../utils/search';
+import { buildVocabulary, buildFacets } from '../utils/facets';
+import { applyFilters, defaultFilters, type FilterContext } from '../utils/filters';
 
-const defaultFilters: ProviderFilters = {
-    search: '',
-    specialty: '',
-    country: '',
-    minRating: 0,
-};
+const SPECIALTY_KEYS = new Set(Object.keys(SpecialtyLabels));
+const SORT_MODES = new Set<SortMode>(['relevance', 'rating', 'reviews', 'distance', 'price']);
 
 /**
  * PostgreSQL stores unquoted column names as all-lowercase.
@@ -28,26 +29,76 @@ function normalizeProvider(row: any): Provider {
         reviewCount:   row.reviewCount   ?? row.reviewcount   ?? 0,
         imageUrl:      row.imageUrl      ?? row.imageurl      ?? undefined,
         bookingUrl:    row.bookingUrl    ?? row.bookingurl    ?? undefined,
-        insurances:    row.insurances    ?? [],
+        postalCode:    row.postalCode    ?? row.postalcode    ?? undefined,
+        services:      row.services      ?? [],
+        priceFromMxn:  row.priceFromMxn  ?? row.pricefrommxn  ?? undefined,
+        // Trimmed here, once, so the insurance facet groups "GNP " with "GNP"
+        // instead of offering both as separate options.
+        insurances: (row.insurances ?? [])
+            .map((s: unknown) => String(s).trim())
+            .filter(Boolean),
+        languages: (row.languages ?? [])
+            .map((s: unknown) => String(s).trim().toLowerCase())
+            .filter(Boolean),
     };
 }
 
-/** Case/accent-insensitive, so "juarez" finds "Juárez" and "pediatria" finds "Pediatría". */
-function fold(s: string): string {
-    let out = '';
-    // Decompose, then drop the combining-diacritic block (U+0300–U+036F).
-    for (const ch of s.toLowerCase().normalize('NFD')) {
-        const code = ch.codePointAt(0)!;
-        if (code >= 0x300 && code <= 0x36f) continue;
-        out += ch;
+// ── URL ⇄ filters ───────────────────────────────────────────────────────────
+//
+// The URL is the single source of truth for the filter state. Keeping it there
+// rather than in a useState means every search is shareable and bookmarkable,
+// and the back button works, without a second copy to keep in sync.
+
+function parseFilters(params: URLSearchParams): ProviderFilters {
+    const num = (key: string, fallback: number) => {
+        const v = Number(params.get(key));
+        return Number.isFinite(v) && params.get(key) !== null ? v : fallback;
+    };
+    const sort = params.get('sort') as SortMode | null;
+
+    return {
+        search: params.get('q') ?? '',
+        specialty: params.getAll('spec').filter((s) => SPECIALTY_KEYS.has(s)) as Specialty[],
+        country: params.get('country') === 'MX' || params.get('country') === 'US'
+            ? (params.get('country') as 'MX' | 'US')
+            : '',
+        minRating: num('rating', 0),
+        insurances: params.getAll('ins'),
+        languages: params.getAll('lang'),
+        bookableOnly: params.get('book') === '1',
+        verifiedOnly: params.get('verified') === '1',
+        withPricing: params.get('priced') === '1',
+        maxPriceMxn: params.has('max') ? num('max', 0) : null,
+        sort: sort && SORT_MODES.has(sort) ? sort : 'relevance',
+        postalCode: params.get('near') ?? '',
+        radiusKm: num('r', DEFAULT_RADIUS_KM),
+    };
+}
+
+function serializeFilters(f: ProviderFilters): URLSearchParams {
+    const p = new URLSearchParams();
+    if (f.search) p.set('q', f.search);
+    for (const s of f.specialty) p.append('spec', s);
+    for (const i of f.insurances) p.append('ins', i);
+    for (const l of f.languages) p.append('lang', l);
+    if (f.country) p.set('country', f.country);
+    if (f.minRating > 0) p.set('rating', String(f.minRating));
+    if (f.bookableOnly) p.set('book', '1');
+    if (f.verifiedOnly) p.set('verified', '1');
+    if (f.withPricing) p.set('priced', '1');
+    if (f.withPricing && f.maxPriceMxn != null) p.set('max', String(f.maxPriceMxn));
+    if (f.sort !== 'relevance') p.set('sort', f.sort);
+    if (f.postalCode) {
+        p.set('near', f.postalCode);
+        if (f.radiusKm !== DEFAULT_RADIUS_KM) p.set('r', String(f.radiusKm));
     }
-    return out;
+    return p;
 }
 
 export function useProviders() {
     const { t } = useTranslation();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [allProviders, setAllProviders] = useState<Provider[]>([]);
-    const [filters, setFilters] = useState<ProviderFilters>(defaultFilters);
     const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -92,13 +143,7 @@ export function useProviders() {
 
                 if (mounted && data) {
                     if (data.length > 0) {
-                        const normalized = data.map(normalizeProvider);
-                        // Debug: log the first provider to verify googlePlaceId is present
-                        if (import.meta.env.DEV) {
-                            const sample = normalized[0] as any;
-                            console.log('[Providers] sample googlePlaceId:', sample?.googlePlaceId);
-                        }
-                        setAllProviders(normalized);
+                        setAllProviders(data.map(normalizeProvider));
                     } else {
                         console.warn('[Supabase] No providers found in DB, using mock data.');
                         setAllProviders(mockProviders);
@@ -119,52 +164,124 @@ export function useProviders() {
         };
     }, []);
 
-    const filtered = useMemo(() => {
-        const q = fold(filters.search.trim());
+    const filters = useMemo(() => parseFilters(searchParams), [searchParams]);
 
-        return allProviders
-            .filter((p) => {
-                if (q) {
-                    // Search covers clinic identity (name, city, address) AND tags.
-                    // Tags are matched in the active language, in Spanish/English
-                    // fallbacks, and by raw key — so "dentist", "dentista" and
-                    // "dentist" all find the same clinics regardless of UI language.
-                    const haystack = [
-                        p.name,
-                        p.city,
-                        p.address ?? '',
-                        ...p.specialty,
-                        ...p.specialty.map((s) => t(`specialties.${s}`, { defaultValue: s })),
-                        ...p.specialty.map((s) => SpecialtyLabels[s] ?? s),
-                    ];
-                    if (!haystack.some((field) => fold(String(field)).includes(q))) return false;
-                }
-                if (filters.specialty && !p.specialty.includes(filters.specialty)) return false;
-                if (filters.country && p.country !== filters.country) return false;
-                if (p.rating < filters.minRating) return false;
-                return true;
-            })
-            .sort((a, b) => {
-                // Promoted always first, then by rating
-                if (a.promoted !== b.promoted) return a.promoted ? -1 : 1;
-                return (b.rating || 0) - (a.rating || 0);
-            });
-    }, [allProviders, filters, t]);
+    const setFilters = useCallback(
+        (next: ProviderFilters, replace: boolean) => {
+            setSearchParams(serializeFilters(next), { replace });
+        },
+        [setSearchParams],
+    );
 
-    const updateFilter = <K extends keyof ProviderFilters>(key: K, value: ProviderFilters[K]) => {
-        setFilters((prev) => ({ ...prev, [key]: value }));
-    };
+    const updateFilter = useCallback(
+        <K extends keyof ProviderFilters>(key: K, value: ProviderFilters[K]) => {
+            // Typing replaces the history entry; picking a filter pushes one, so
+            // Back steps through deliberate choices rather than through keystrokes.
+            setFilters({ ...filters, [key]: value }, key === 'search');
+        },
+        [filters, setFilters],
+    );
 
-    const resetFilters = () => setFilters(defaultFilters);
+    /** Several axes at once, as one history entry — e.g. a postal search. */
+    const patchFilters = useCallback(
+        (patch: Partial<ProviderFilters>, replace = false) => {
+            setFilters({ ...filters, ...patch }, replace);
+        },
+        [filters, setFilters],
+    );
+
+    const resetFilters = useCallback(() => setFilters(defaultFilters, false), [setFilters]);
+
+    /**
+     * The folded haystack. Rebuilt only when the directory or the UI language
+     * changes — not per keystroke, which is what makes scoring 4k rows on every
+     * character viable.
+     */
+    const labelOf = useCallback(
+        (s: Specialty) => t(`specialties.${s}`, { defaultValue: s }),
+        [t],
+    );
+
+    const searchIndex = useMemo(
+        () => buildSearchIndex(allProviders, labelOf),
+        [allProviders, labelOf],
+    );
+
+    const vocabulary = useMemo(
+        () => buildVocabulary(allProviders, labelOf),
+        [allProviders, labelOf],
+    );
+
+    /**
+     * Centre point of each postal code, averaged from the providers that sit in
+     * it. Derived from data we already hold, so "near this ZIP" costs no
+     * geocoding call and stays correct as the directory grows.
+     */
+    const postalCentroids = useMemo(() => {
+        const sums = new Map<string, { lat: number; lng: number; n: number }>();
+        for (const p of allProviders) {
+            if (!p.postalCode || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
+            const acc = sums.get(p.postalCode) ?? { lat: 0, lng: 0, n: 0 };
+            acc.lat += p.lat;
+            acc.lng += p.lng;
+            acc.n += 1;
+            sums.set(p.postalCode, acc);
+        }
+
+        const centroids = new Map<string, { lat: number; lng: number }>();
+        for (const [code, acc] of sums) {
+            centroids.set(code, { lat: acc.lat / acc.n, lng: acc.lng / acc.n });
+        }
+        return centroids;
+    }, [allProviders]);
+
+    /** Null when no code is active, and also when the code matches nothing we hold. */
+    const centre = useMemo(
+        () => (filters.postalCode ? postalCentroids.get(filters.postalCode) ?? null : null),
+        [filters.postalCode, postalCentroids],
+    );
+
+    const ctx: FilterContext = useMemo(
+        () => ({ index: searchIndex, terms: tokenize(filters.search), centre }),
+        [searchIndex, filters.search, centre],
+    );
+
+    const filtered = useMemo(
+        () => applyFilters(allProviders, filters, ctx),
+        [allProviders, filters, ctx],
+    );
+
+    /**
+     * Facet counts describe the *filters*, not the text query — they answer
+     * "how many would I get if I ticked this box", which is a question about
+     * the other axes. Excluding the query from the dependency list also keeps
+     * this 4k-row pass off the per-keystroke path.
+     */
+    const facetCtx: FilterContext = useMemo(
+        () => ({ index: searchIndex, terms: [], centre }),
+        [searchIndex, centre],
+    );
+
+    const facets = useMemo(
+        () => buildFacets(allProviders, filters, facetCtx),
+        [allProviders, filters, facetCtx],
+    );
 
     return {
         providers: filtered,
         allProviders,
         filters,
         updateFilter,
+        patchFilters,
         resetFilters,
+        facets,
+        vocabulary,
         selectedProvider,
         setSelectedProvider,
-        loading
+        loading,
+        /** Lets the UI tell "no providers near 32300" apart from "no such code". */
+        knownPostalCodes: postalCentroids,
+        /** Distance from the searched postal centre, for the result cards. */
+        centre,
     };
 }

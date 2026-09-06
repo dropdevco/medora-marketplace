@@ -5,6 +5,7 @@ import { useGoogleReviews } from '../../hooks/useGoogleReviews';
 import { ReviewCarousel } from './ReviewCarousel';
 import { ClinicPhotos } from './ClinicPhotos';
 import { InsuranceList } from './InsuranceList';
+import { ServiceList } from './ServiceList';
 import {
     IconClose, IconStar, IconMapPin, IconPhone, IconLanguage,
     IconPromoted, IconVerified, IconReviews, IconViews,
@@ -222,6 +223,8 @@ export function ProviderDrawer({ provider, onClose }: ProviderDrawerProps) {
                     <ClinicPhotos placeId={provider.googlePlaceId} />
 
                     <InsuranceList insurances={provider.insurances ?? []} />
+
+                    <ServiceList services={provider.services ?? []} />
 
                     <ReviewCarousel reviews={reviews} loading={reviewsLoading} />
                 </div>

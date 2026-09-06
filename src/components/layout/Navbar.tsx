@@ -24,10 +24,6 @@ export function Navbar() {
 
     const isSpanish = i18n.language.startsWith('es');
 
-    const toggleLanguage = () => {
-        i18n.changeLanguage(isSpanish ? 'en' : 'es');
-    };
-
     return (
         <nav
             className="ms-nav"
@@ -57,34 +53,39 @@ export function Navbar() {
                 </div>
 
                 {/*
-                  The toggle displays the language currently being shown, not the
-                  one you would switch to. The tooltip states the destination.
+                  Both languages stay on screen rather than showing only the
+                  active one — a single "ES" pill makes you guess whether
+                  clicking it means "switch to Spanish" or "you're in
+                  Spanish, click to leave". Two labels with one highlighted
+                  removes the guess.
                 */}
-                <button
-                    className="press"
-                    onClick={toggleLanguage}
-                    title={isSpanish ? t('nav.switchToEnglish') : t('nav.switchToSpanish')}
-                    aria-label={isSpanish ? t('nav.switchToEnglish') : t('nav.switchToSpanish')}
+                <div
+                    role="group"
+                    aria-label={t('nav.languageGroup', { defaultValue: 'Language' })}
                     style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.35rem',
+                        gap: '0.2rem',
                         background: 'var(--surface)',
                         border: '1px solid var(--border)',
-                        color: 'var(--white)',
-                        padding: '0.35rem 0.75rem',
                         borderRadius: 'var(--radius-pill)',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.04em',
-                        whiteSpace: 'nowrap',
+                        padding: '3px',
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--gold)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
                 >
-                    <IconLanguage size={15} />
-                    {isSpanish ? 'ES' : 'EN'}
-                </button>
+                    <IconLanguage size={14} style={{ color: 'var(--gray-400)', margin: '0 0.2rem' }} />
+                    <LangOption
+                        label="EN"
+                        active={!isSpanish}
+                        title={t('nav.switchToEnglish')}
+                        onClick={() => i18n.changeLanguage('en')}
+                    />
+                    <LangOption
+                        label="ES"
+                        active={isSpanish}
+                        title={t('nav.switchToSpanish')}
+                        onClick={() => i18n.changeLanguage('es')}
+                    />
+                </div>
 
                 <button
                     className="press"
@@ -106,6 +107,34 @@ export function Navbar() {
                 </button>
             </div>
         </nav>
+    );
+}
+
+function LangOption({ label, active, title, onClick }: {
+    label: string; active: boolean; title: string; onClick: () => void;
+}) {
+    return (
+        <button
+            className="press"
+            onClick={onClick}
+            aria-pressed={active}
+            title={title}
+            aria-label={title}
+            style={{
+                padding: '0.3rem 0.6rem',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                whiteSpace: 'nowrap',
+                color: active ? 'var(--on-brand)' : 'var(--gray-400)',
+                background: active ? 'var(--brand)' : 'transparent',
+            }}
+            onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = 'var(--white)'; }}
+            onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = 'var(--gray-400)'; }}
+        >
+            {label}
+        </button>
     );
 }
 

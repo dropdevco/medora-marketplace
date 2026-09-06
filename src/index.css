@@ -71,6 +71,15 @@
   --nav-bg: rgba(255, 255, 255, 0.92);
   --nav-border: #dfe5ef;
 
+  /* Monogram covers. A provider's hue comes from its id; only the lightness
+     and saturation change with the theme, so a clinic keeps its colour across
+     a theme flip instead of becoming a different place. */
+  --mono-s1: 46%;
+  --mono-l1: 92%;
+  --mono-s2: 40%;
+  --mono-l2: 84%;
+  --mono-fg: 24%;
+
   --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
 }
@@ -116,6 +125,12 @@
 
   --nav-bg: rgba(11, 31, 58, 0.92);
   --nav-border: #1e3557;
+
+  --mono-s1: 34%;
+  --mono-l1: 27%;
+  --mono-s2: 30%;
+  --mono-l2: 19%;
+  --mono-fg: 84%;
 }
 
 /* ─── Reset ─────────────────────────────────────────── */
@@ -383,24 +398,6 @@ select option {
 /* ─── Mobile Responsiveness ──────────────────────────── */
 .mobile-only { display: none !important; }
 
-.map-sidebar {
-  width: 440px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--nav-border);
-  background: var(--navy);
-  overflow-y: auto;
-}
-
-@media (max-width: 1200px) {
-  .map-sidebar { width: 380px; }
-}
-
-/* The nav carries a wordmark, two links and two controls. Below ~620px that
-   no longer fits, and because the bar is fixed it would push the language and
-   theme buttons off-screen rather than wrap. Shed the wordmark first, then
-   tighten the links. */
 @media (max-width: 620px) {
   .ms-nav { padding: 0 0.85rem !important; }
   .ms-wordmark { display: none !important; }
@@ -420,9 +417,6 @@ select option {
   .desktop-only { display: none !important; }
   .mobile-only { display: flex !important; }
 
-  .map-sidebar { width: 100% !important; border-right: none !important; }
-  .map-sidebar.hidden-on-mobile { display: none !important; }
-  .map-main.hidden-on-mobile { display: none !important; }
   .drawer-panel { width: 100% !important; max-width: 100% !important; }
 }
 
@@ -458,4 +452,712 @@ select option {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Search-first shell
+   Two states share this file: the discover page (search box over
+   browse rows, no map) and the results page (sticky toolbar over a
+   list/map split). The state is decided by the filters, not by CSS —
+   see SearchPage.tsx.
+   ═══════════════════════════════════════════════════════════════ */
+
+.ms-page {
+  min-height: 100dvh;
+  background: var(--navy);
+}
+
+/* ─── Discover hero ──────────────────────────────────── */
+.ms-hero-section {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 3.5rem 1.25rem 2rem;
+  text-align: center;
+}
+
+.ms-hero-copy { margin-bottom: 2rem; }
+
+.ms-hero-title {
+  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  margin-bottom: 0.75rem;
+}
+
+.ms-hero-sub {
+  font-size: 1.02rem;
+  color: var(--gray-400);
+  max-width: 34rem;
+  margin: 0 auto;
+}
+
+/* ─── The segmented search box ───────────────────────────
+   One pill, three segments. The active segment lifts onto its own
+   raised surface so it reads as the field being edited, which is what
+   lets three controls share the footprint of one. */
+.ms-hero-wrap { position: relative; }
+
+.ms-hero {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: var(--navy-800);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 0.35rem 0.35rem 0.35rem 0.5rem;
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+  transition: box-shadow 0.22s var(--ease-out), border-color 0.22s var(--ease-out);
+}
+
+.ms-hero.is-open {
+  box-shadow: var(--shadow);
+  /* The open segment paints its own fill, so the shell drops back to a
+     recessed surface — two stacked panels of the same colour read as a
+     seam rather than as one raised field. */
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+.ms-seg {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.05rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background 0.18s var(--ease-out);
+}
+
+.ms-seg-what { flex: 1.5 1 0; }
+
+.ms-hero.is-open .ms-seg:hover { background: var(--surface-hover); }
+.ms-hero.is-open .ms-seg.is-active,
+.ms-hero.is-open .ms-seg.is-active:hover {
+  background: var(--navy-800);
+  box-shadow: var(--shadow-sm);
+}
+
+.ms-seg-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--gray-500);
+  cursor: pointer;
+}
+
+.ms-seg-input {
+  width: 100%;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--white);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0;
+}
+.ms-seg-input::placeholder { color: var(--gray-600); font-weight: 500; }
+
+.ms-seg-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--white);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-seg-value.is-empty { color: var(--gray-600); font-weight: 500; }
+
+.ms-seg-clear {
+  display: flex;
+  flex-shrink: 0;
+  padding: 0.1rem;
+  background: none;
+  color: var(--gray-500);
+}
+
+.ms-seg-divider {
+  align-self: center;
+  width: 1px;
+  height: 26px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+/* A divider beside an open segment would cut through its raised fill,
+   so it is hidden rather than drawn over. */
+.ms-hero.is-open .ms-seg.is-active + .ms-seg-divider,
+.ms-hero.is-open .ms-seg-divider:has(+ .ms-seg.is-active) { opacity: 0; }
+
+.ms-seg-tags {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.ms-mini-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.3rem 0.1rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--gray-200);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.ms-mini-chip button {
+  display: flex;
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+.ms-hero-go {
+  flex-shrink: 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 52px;
+  padding: 0 1.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+  color: var(--on-brand);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+.ms-hero-go-text { white-space: nowrap; }
+
+/* ─── Segment popovers ───────────────────────────────── */
+.ms-pop {
+  position: absolute;
+  top: calc(100% + 14px);
+  z-index: 80;
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem;
+  background: var(--navy-800);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  max-height: 24rem;
+  overflow-y: auto;
+  cursor: default;
+  animation: fadeIn 0.16s var(--ease-out) both;
+}
+
+.ms-pop-what  { left: -0.5rem; right: -0.5rem; }
+.ms-pop-where { left: 0; width: 20rem; max-width: 88vw; }
+.ms-pop-cover { left: 0; width: 19rem; max-width: 88vw; }
+
+.ms-pop-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--white);
+  font-size: 0.9rem;
+  text-align: left;
+}
+.ms-pop-row:hover,
+.ms-pop-row.is-active { background: var(--surface-hover); }
+.ms-pop-row.is-chosen { background: var(--gold-dim); }
+
+.ms-pop-ico { display: flex; flex-shrink: 0; color: var(--gray-500); }
+
+.ms-pop-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-pop-label strong { font-weight: 600; }
+.ms-pop-label em {
+  font-style: normal;
+  font-size: 0.76rem;
+  color: var(--gray-500);
+}
+
+.ms-pop-meta {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  font-size: 0.72rem;
+  color: var(--gray-500);
+}
+
+.ms-pop-sep {
+  display: block;
+  height: 1px;
+  background: var(--border);
+  margin: 0.4rem 0.3rem;
+}
+
+.ms-pop-zip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem 0.4rem;
+}
+.ms-pop-zip label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gray-500);
+}
+.ms-pop-zip input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.4rem 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--white);
+  font-size: 0.85rem;
+  font-weight: 700;
+  outline: none;
+}
+.ms-pop-zip button {
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+  color: var(--on-brand);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.ms-pop-zip button:disabled { opacity: 0.4; cursor: default; }
+
+.ms-pop-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.3rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--gray-500);
+}
+.ms-pop-search input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--white);
+  font-size: 0.85rem;
+}
+
+.ms-pop-empty {
+  padding: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--gray-500);
+}
+
+/* ─── Category rail ──────────────────────────────────── */
+.ms-cats {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.6rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0.15rem 0 0;
+  -webkit-overflow-scrolling: touch;
+}
+.ms-cats::-webkit-scrollbar { display: none; }
+
+.ms-cat {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.55rem 0.15rem 0.6rem;
+  background: none;
+  color: var(--gray-500);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.18s var(--ease-out), border-color 0.18s var(--ease-out), opacity 0.18s var(--ease-out);
+  opacity: 0.8;
+}
+.ms-cat:hover { color: var(--white); opacity: 1; border-bottom-color: var(--border-strong); }
+.ms-cat.is-active {
+  color: var(--white);
+  opacity: 1;
+  border-bottom-color: var(--white);
+}
+
+.ms-cats-band {
+  border-bottom: 1px solid var(--border);
+  background: var(--navy);
+}
+.ms-cats-band .ms-band-inner { padding-top: 0; padding-bottom: 0; }
+
+/* ─── Results toolbar ────────────────────────────────── */
+.ms-band {
+  position: sticky;
+  z-index: 40;
+  background: var(--nav-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+
+.ms-band-inner {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0.6rem 1.5rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ms-band-pill { display: flex; justify-content: center; }
+
+/* ─── Collapsed search pill ──────────────────────────── */
+.ms-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  max-width: 100%;
+  padding: 0.35rem 0.35rem 0.35rem 1.2rem;
+  border-radius: var(--radius-pill);
+  background: var(--navy-800);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  color: var(--white);
+  font-size: 0.87rem;
+  font-weight: 600;
+  transition: box-shadow 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+}
+.ms-pill:hover { box-shadow: var(--shadow); border-color: var(--border-strong); }
+
+.ms-pill-part {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 14rem;
+  color: var(--gray-300);
+}
+.ms-pill-part.is-lead { color: var(--white); font-weight: 700; }
+
+.ms-pill-dot {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.ms-pill-go {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--on-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Quick filter chips ─────────────────────────────── */
+.ms-chiprow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 0.2rem;
+}
+.ms-chiprow::-webkit-scrollbar { display: none; }
+
+.ms-chiprow-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+  margin: 0 0.15rem;
+}
+
+.ms-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: var(--radius-pill);
+  background: var(--navy-800);
+  border: 1px solid var(--border);
+  color: var(--gray-300);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+.ms-chip:hover { border-color: var(--border-strong); color: var(--white); }
+.ms-chip.is-active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--on-brand);
+}
+.ms-chip.is-dead { opacity: 0.4; cursor: default; }
+.ms-chip.is-dead:hover { border-color: var(--border); color: var(--gray-300); }
+
+.ms-chip-filters { font-weight: 700; }
+
+.ms-chip-count {
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: var(--radius-pill);
+  background: var(--gold);
+  color: var(--navy-800);
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ms-chip-n { color: var(--gray-500); font-size: 0.74rem; font-weight: 600; }
+
+/* ─── Results split ──────────────────────────────────────
+   The page scrolls (the virtualizer measures the window) and the map
+   sticks beside it. Giving the list its own scroll container instead
+   would mean two scrollbars and a map that scrolls away on mobile. */
+.ms-results {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 4rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 42%);
+  gap: 1.75rem;
+  align-items: start;
+}
+
+.ms-results-map {
+  position: sticky;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.ms-view-fab { display: none; }
+
+/* ─── Discover rows ──────────────────────────────────── */
+.ms-discover {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 2.25rem 1.5rem 4rem;
+}
+
+.ms-row-title:hover { color: var(--gold); }
+
+.ms-row-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 5 * 1.15rem) / 6);
+  gap: 1.15rem;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  padding-bottom: 0.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+.ms-row-track::-webkit-scrollbar { display: none; }
+
+.ms-row-cell { scroll-snap-align: start; min-width: 0; }
+
+.ms-tile-media { transition: box-shadow 0.24s var(--ease-out); }
+.ms-tile-img { transition: transform 0.4s var(--ease-out); }
+.ms-tile:hover .ms-tile-media { box-shadow: var(--shadow); }
+.ms-tile:hover .ms-tile-img { transform: scale(1.05); }
+
+/* ─── Filter modal ───────────────────────────────────── */
+.ms-modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(8, 15, 28, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: fadeIn 0.18s var(--ease-out) both;
+}
+
+.ms-modal {
+  width: 100%;
+  max-width: 34rem;
+  max-height: min(46rem, 90dvh);
+  display: flex;
+  flex-direction: column;
+  background: var(--navy-800);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--shadow);
+  outline: none;
+  overflow: hidden;
+}
+
+.ms-modal-head {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 1rem;
+}
+
+.ms-modal-x {
+  position: absolute;
+  left: 0.85rem;
+  display: flex;
+  padding: 0.3rem;
+  border-radius: 50%;
+  background: none;
+  color: var(--gray-400);
+}
+.ms-modal-x:hover { background: var(--surface-hover); color: var(--white); }
+
+.ms-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.25rem 1.4rem 1rem;
+}
+
+.ms-modal-foot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.2rem;
+  border-top: 1px solid var(--border);
+}
+
+.ms-modal-clear {
+  background: none;
+  color: var(--white);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: underline;
+  padding: 0.4rem 0.2rem;
+}
+
+.ms-modal-go {
+  padding: 0.7rem 1.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+  color: var(--on-brand);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+/* ─── Breakpoints ────────────────────────────────────────
+   1180: the map stops being wide enough to read, so it becomes a
+   toggle instead of a panel. Below it, list and map take turns and a
+   floating button switches between them. */
+@media (max-width: 1440px) {
+  .ms-row-track { grid-auto-columns: calc((100% - 4 * 1.15rem) / 5); }
+}
+
+@media (max-width: 1180px) {
+  .ms-results {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .ms-results-map { display: none; }
+  /* The list is unmounted rather than hidden in map view — see SearchPage. */
+  .ms-results.is-map .ms-results-map { display: block; }
+
+  .ms-view-fab {
+    position: fixed;
+    left: 50%;
+    bottom: 1.5rem;
+    transform: translateX(-50%);
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.7rem 1.3rem;
+    border-radius: var(--radius-pill);
+    background: var(--brand);
+    color: var(--on-brand);
+    font-size: 0.88rem;
+    font-weight: 800;
+    box-shadow: var(--shadow);
+  }
+  /* .press translates on hover, which would undo the centring. */
+  .ms-view-fab:hover  { transform: translateX(-50%) translateY(-1px); }
+  .ms-view-fab:active { transform: translateX(-50%) scale(0.975); }
+
+  .ms-row-track { grid-auto-columns: calc((100% - 3 * 1.15rem) / 4); }
+}
+
+@media (max-width: 900px) {
+  .ms-row-track { grid-auto-columns: calc((100% - 2 * 1.15rem) / 3); }
+  .ms-hero-section { padding-top: 2.25rem; }
+}
+
+/* Below this the three segments stop being legible side by side, so
+   the pill unrolls into a stacked card. */
+@media (max-width: 760px) {
+  .ms-hero {
+    flex-direction: column;
+    align-items: stretch;
+    border-radius: calc(var(--radius) + 6px);
+    padding: 0.4rem;
+  }
+  .ms-seg { border-radius: var(--radius); padding: 0.6rem 0.9rem; }
+  .ms-seg-divider { width: auto; height: 1px; align-self: stretch; margin: 0 0.6rem; }
+  .ms-pop-what { left: 0; right: 0; }
+  .ms-hero-go {
+    width: 100%;
+    justify-content: center;
+    height: 46px;
+    margin-top: 0.35rem;
+  }
+  .ms-band-inner { padding-left: 1rem; padding-right: 1rem; }
+  .ms-results { padding-left: 1rem; padding-right: 1rem; }
+  .ms-discover { padding-left: 1rem; padding-right: 1rem; }
+  .ms-row-track { grid-auto-columns: calc((100% - 1.15rem) / 2); }
+  .ms-pill-cover { display: none; }
+  .ms-cats { gap: 1.15rem; }
+  .ms-modal-scrim { padding: 0; }
+  .ms-modal { max-width: 100%; max-height: 100dvh; height: 100dvh; border-radius: 0; border: none; }
+}
+
+@media (max-width: 480px) {
+  .ms-row-track { grid-auto-columns: 62%; }
+}
+
+/* ─── Monogram cover ─────────────────────────────────────
+   Composed from --mono-h (set inline, per provider) and the theme
+   tokens above, rather than from a fully inline gradient — an inline
+   hsl() cannot follow a theme flip. */
+.ms-mono {
+  background: linear-gradient(
+    150deg,
+    hsl(var(--mono-h) var(--mono-s1) var(--mono-l1)) 0%,
+    hsl(calc(var(--mono-h) + 40deg) var(--mono-s2) var(--mono-l2)) 100%
+  );
+  color: hsl(var(--mono-h) 55% var(--mono-fg));
 }

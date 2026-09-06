@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
-import { MapPage } from './pages/MapPage';
+import { SearchPage } from './pages/SearchPage';
 import { SalesPage } from './pages/SalesPage';
 import './index.css';
 
@@ -9,7 +9,7 @@ export default function App() {
     <BrowserRouter>
       <Navbar />
       <Routes>
-        <Route path="/" element={<MapPage />} />
+        <Route path="/" element={<SearchPage />} />
         <Route path="/sales" element={<SalesPage />} />
       </Routes>
     </BrowserRouter>
