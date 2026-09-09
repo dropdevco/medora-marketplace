@@ -194,7 +194,7 @@ export function FilterBar({ filters, updateFilter, patchFilters, facets }: Filte
 
             <Section title={t('filters.ratingLabel')} defaultOpen>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                    <IconStar size={14} filled style={{ color: 'var(--gold)' }} />
+                    <IconStar size={14} filled style={{ color: 'var(--star)' }} />
                     {RATINGS.map((r) => (
                         <Chip
                             key={r}

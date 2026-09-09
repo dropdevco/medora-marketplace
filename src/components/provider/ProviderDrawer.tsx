@@ -150,7 +150,7 @@ export function ProviderDrawer({ provider, onClose }: ProviderDrawerProps) {
                         }}
                     >
                         <StatBox
-                            icon={<IconStar size={19} filled style={{ color: 'var(--gold)' }} />}
+                            icon={<IconStar size={19} filled style={{ color: 'var(--star)' }} />}
                             value={provider.rating.toFixed(1)}
                             label={t('drawer.rating')}
                         />

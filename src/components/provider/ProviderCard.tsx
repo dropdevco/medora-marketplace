@@ -227,7 +227,7 @@ export function RatingBadge({ rating, count }: { rating: number; count: number }
             display: 'flex', alignItems: 'center', gap: '0.28rem',
             fontSize: '0.82rem', flexShrink: 0,
         }}>
-            <IconStar size={14} filled style={{ color: 'var(--gold)' }} />
+            <IconStar size={14} filled style={{ color: 'var(--star)' }} />
             <strong style={{ color: 'var(--white)', fontWeight: 800 }}>{rating.toFixed(1)}</strong>
             <span style={{ color: 'var(--gray-400)' }}>({count.toLocaleString()})</span>
         </span>

@@ -1,58 +1,113 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap');
 
+
 /* ═══════════════════════════════════════════════════════════════
-   MedSociety — Design Tokens
+   MedSociety — Design Tokens · "Clinic White"
+
+   Ink, paper, and a single green. Colour is spent only where it
+   carries meaning — verified, rating, error, which side of the
+   border — and never on decoration. With 4,000+ rows of other
+   people's logos and portraits on screen, that restraint is what
+   keeps the page readable.
+
    Light is the DEFAULT theme (:root). Dark is opt-in.
+
+   Two splits this file depends on:
+
+   1. IDENTITY vs INTERACTIVE. `--brand-identity` is what the logo
+      and wordmark are painted; it is the SAME hex in both themes,
+      because colour memory is the brand. `--brand` is what buttons
+      are painted, and it inverts with the theme so it stays legible
+      on the ground behind it. Never paint the mark with `--brand`.
+
+   2. HAIRLINE vs CONTROL BORDER. `--border` separates stacked
+      content and is allowed to be faint. `--border-strong` is the
+      only edge permitted where the border IS the affordance —
+      inputs, chips, selects, secondary buttons — and it holds the
+      3:1 WCAG 1.4.11 minimum. Never use `--border` on a control.
 
    Legacy alias note: `--navy` means "page background" and `--white`
    means "primary text". They are inverted in dark mode. Components
    written before the light-first refactor rely on this, so the
    aliases are preserved deliberately.
+
+   Every ratio in the comments below is measured against the surface
+   named beside it, not estimated.
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
   /* ── Surfaces (light) ── */
   --navy: #ffffff;          /* page background        */
   --navy-800: #ffffff;      /* elevated panel         */
-  --navy-700: #dbe2ed;      /* divider / scrollbar    */
-  --navy-600: #c2ccdb;
+  --navy-700: #e6e6e3;      /* divider / scrollbar    */
+  --navy-600: #cfcfcd;
 
-  /* ── Text (light) — sharp, high-contrast ── */
-  --white: #080f1c;         /* primary text  (17.6:1) */
-  --gray-100: #101a2c;
-  --gray-200: #1d2a41;
-  --gray-300: #2c3a52;
-  --gray-400: #4a5a75;      /* muted text     (7.4:1) */
-  --gray-500: #5d6d88;
-  --gray-600: #74839c;
-  --gray-700: #c6cedb;      /* empty-state strokes    */
+  /* ── Text (light) — warm-neutral, not blue-grey ── */
+  --white: #14161a;         /* primary text  (18.1:1) */
+  --gray-100: #1d1f24;      /*               (16.5:1) */
+  --gray-200: #2a2d33;      /*               (13.8:1) */
+  --gray-300: #3c4046;      /*               (10.4:1) */
+  --gray-400: #5c6068;      /* muted text     (6.3:1) */
+  --gray-500: #6d7178;      /*                (4.9:1) */
+  --gray-600: #83878e;      /* icons/deco     (3.6:1) */
+  --gray-700: #cfcfcd;      /* empty-state strokes    */
 
-  /* ── Brand ── */
-  --brand: #0b1f3a;
-  --on-brand: #ffffff;      /* text that sits on --brand      */
-  --gold: #8a6410;          /* AA on white — text/icon gold  */
-  --gold-light: #b4881d;
-  --gold-fill: #c9a84c;     /* decorative fill only          */
-  --gold-dim: rgba(138, 100, 16, 0.10);
+  /* ── Brand ──
+     --brand-identity never changes across themes. --brand does. */
+  --brand-identity: #1b1d22;
+  --brand: #1b1d22;         /* interactive fill (16.9:1 vs white) */
+  --on-brand: #ffffff;      /* text that sits on --brand          */
 
-  /* ── Country accents — sharpened for light ── */
-  --us: #1544c9;
-  --us-soft: rgba(21, 68, 201, 0.09);
-  --mx: #12703c;
-  --mx-soft: rgba(18, 112, 60, 0.09);
+  /* The mark's own ground. A monochrome mark cannot keep one fill in
+     both themes without dissolving into one of them, so the shield
+     inverts while the accent seal ring — the part people actually
+     recognise — stays put. Never paint the mark with --brand. */
+  --mark-bg: #1b1d22;
+  --mark-fg: #ffffff;
 
-  --green: #12703c;
-  --red: #c22525;
+  /* ── Accent — the one colour in the system ──
+     Carries verified, emphasis, active state and links. AA as text
+     on both white (6.5:1) and --surface (6.0:1), so it needs no
+     special case anywhere. */
+  --accent: #0f6b52;
+  --accent-fill: #4fc79f;   /* decorative fill only               */
+  --accent-dim: rgba(15, 107, 82, 0.09);
+
+  /* Legacy aliases. `--gold` is retained because 40+ call sites use
+     it as "the accent"; it is no longer gold. Star ratings moved to
+     --star, which is the only warm colour left in the system. */
+  --gold: var(--accent);
+  --gold-light: #148468;
+  --gold-fill: var(--accent-fill);
+  --gold-dim: var(--accent-dim);
+
+  /* ── Rating ──
+     Amber, because a green star reads as a checkmark. Icon-only —
+     3.8:1 vs white clears the 3:1 non-text minimum, and it is never
+     used for text. */
+  --star: #b5760a;
+
+  /* ── Country tags — deliberately the LOWEST chroma in the system.
+     They are metadata, not calls to action; the label does the
+     distinguishing, the hue only supports it. ── */
+  --us: #3f5570;            /* 7.7:1 on white */
+  --us-soft: rgba(63, 85, 112, 0.08);
+  --mx: #3f6b52;            /* 6.1:1 on white */
+  --mx-soft: rgba(63, 107, 82, 0.08);
+
+  /* ── Semantic ── */
+  --green: var(--accent);
+  --red: #a92f28;           /* 6.7:1 on white */
 
   /* ── Fills & lines ── */
-  --surface: #f4f7fb;
-  --surface-hover: #e9eef6;
-  --border: #d3dbe8;        /* real, visible 1px line */
-  --border-strong: #aab7ca;
+  --surface: #f6f6f5;
+  --surface-hover: #eeeeec;
+  --border: #d6d6d3;        /* HAIRLINE — stacked content only     */
+  --border-strong: #8b8f96; /* CONTROLS — 3.25:1, meets 1.4.11     */
 
   /* ── Elevation — flat and clean, no glow ── */
-  --shadow: 0 10px 30px rgba(8, 15, 28, 0.10);
-  --shadow-sm: 0 1px 3px rgba(8, 15, 28, 0.08);
+  --shadow: 0 10px 30px rgba(20, 22, 26, 0.09);
+  --shadow-sm: 0 1px 3px rgba(20, 22, 26, 0.07);
 
   --radius: 14px;
   --radius-sm: 9px;
@@ -69,69 +124,87 @@
     opacity 0.18s cubic-bezier(0.32, 0.72, 0, 1);
 
   --nav-bg: rgba(255, 255, 255, 0.92);
-  --nav-border: #dfe5ef;
+  --nav-border: #e2e2df;
 
-  /* Monogram covers. A provider's hue comes from its id; only the lightness
-     and saturation change with the theme, so a clinic keeps its colour across
-     a theme flip instead of becoming a different place. */
-  --mono-s1: 46%;
-  --mono-l1: 92%;
-  --mono-s2: 40%;
-  --mono-l2: 84%;
-  --mono-fg: 24%;
+  /* Monogram covers. A provider's tint comes from its id, but the id
+     now selects from SIX curated hues (see hueOf in utils/images.ts)
+     instead of the full 360° wheel — the avatar is the most-repeated
+     element in the product and must not out-colour the brand. Only
+     saturation and lightness change with the theme, so a clinic keeps
+     its tint across a theme flip instead of becoming a different place.
+     Glyph contrast over the darker gradient stop: 5.1:1 worst case. */
+  --mono-s1: 20%;
+  --mono-l1: 94%;
+  --mono-s2: 16%;
+  --mono-l2: 87%;
+  --mono-fg: 26%;
 
   --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
 }
 
 [data-theme='dark'] {
-  --navy: #0b1f3a;
-  --navy-800: #0f2847;
-  --navy-700: #1b3355;
-  --navy-600: #24406a;
+  --navy: #121316;
+  --navy-800: #1a1c20;
+  --navy-700: #26272b;
+  --navy-600: #34363b;
 
-  --white: #f2f6fd;
-  --gray-100: #e2e9f5;
-  --gray-200: #cdd8e9;
-  --gray-300: #b3c1d8;
-  --gray-400: #93a3bd;
-  --gray-500: #8493ad;
-  --gray-600: #74839c;
-  --gray-700: #2b3f5f;
+  --white: #f2f2f0;         /* 16.6:1 on --navy */
+  --gray-100: #e2e2e0;      /* 14.3:1 */
+  --gray-200: #ccccca;      /* 11.6:1 */
+  --gray-300: #b0b1b4;      /*  8.7:1 */
+  --gray-400: #a0a3a8;      /*  7.3:1 */
+  --gray-500: #909399;      /*  6.0:1 */
+  --gray-600: #7c8087;      /*  4.7:1 */
+  --gray-700: #2c2e33;
 
-  /* On navy, the gold carries the emphasis the deep navy can no longer give. */
-  --brand: #dcb75f;
-  --on-brand: #0b1f3a;
-  --gold: #dcb75f;
-  --gold-light: #ecd08a;
-  --gold-fill: #c9a84c;
-  --gold-dim: rgba(220, 183, 95, 0.14);
+  /* The mark keeps its ink; the interactive fill inverts to paper.
+     A white button on near-black is the dark-mode form of "ink on
+     paper" — same relationship, opposite ground. */
+  --brand-identity: #1b1d22;
+  --brand: #f2f2f0;
+  --on-brand: #121316;
 
-  --us: #7fb0ff;
-  --us-soft: rgba(127, 176, 255, 0.14);
-  --mx: #5fd88f;
-  --mx-soft: rgba(95, 216, 143, 0.14);
+  --mark-bg: #f2f2f0;
+  --mark-fg: #121316;
 
-  --green: #5fd88f;
-  --red: #ff6b6b;
+  --accent: #4fc79f;        /* 8.9:1 on --navy */
+  --accent-fill: #4fc79f;
+  --accent-dim: rgba(79, 199, 159, 0.13);
 
-  --surface: #12294a;
-  --surface-hover: #183256;
-  --border: #233d63;
-  --border-strong: #33527f;
+  --gold: var(--accent);
+  --gold-light: #7cd9b8;
+  --gold-fill: var(--accent-fill);
+  --gold-dim: var(--accent-dim);
+
+  --star: #e0a73f;          /* 8.6:1 on --navy */
+
+  --us: #93aec9;            /* 8.1:1 */
+  --us-soft: rgba(147, 174, 201, 0.13);
+  --mx: #7fc9a6;            /* 9.6:1 */
+  --mx-soft: rgba(127, 201, 166, 0.13);
+
+  --green: var(--accent);
+  --red: #ff7a70;           /* 7.3:1 */
+
+  --surface: #1a1c20;
+  --surface-hover: #212429;
+  --border: #26272b;        /* HAIRLINE */
+  --border-strong: #62666f; /* CONTROLS — 3.23:1 on --navy */
 
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
 
-  --nav-bg: rgba(11, 31, 58, 0.92);
-  --nav-border: #1e3557;
+  --nav-bg: rgba(18, 19, 22, 0.92);
+  --nav-border: #26272b;
 
-  --mono-s1: 34%;
-  --mono-l1: 27%;
-  --mono-s2: 30%;
-  --mono-l2: 19%;
-  --mono-fg: 84%;
+  --mono-s1: 22%;
+  --mono-l1: 19%;
+  --mono-s2: 18%;
+  --mono-l2: 14%;
+  --mono-fg: 78%;
 }
+
 
 /* ─── Reset ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

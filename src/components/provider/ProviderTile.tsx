@@ -105,7 +105,7 @@ export function ProviderTile({ provider, onClick }: ProviderTileProps) {
                         display: 'flex', alignItems: 'center', gap: '0.22rem',
                         fontSize: '0.82rem', flexShrink: 0,
                     }}>
-                        <IconStar size={13} filled style={{ color: 'var(--gold)' }} />
+                        <IconStar size={13} filled style={{ color: 'var(--star)' }} />
                         <strong style={{ fontWeight: 700 }}>{provider.rating.toFixed(1)}</strong>
                     </span>
                 </div>

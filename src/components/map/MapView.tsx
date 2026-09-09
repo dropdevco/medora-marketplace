@@ -44,7 +44,7 @@ function clusterIcon(count: number, largest: number): google.maps.Symbol {
     const share = count / Math.max(largest, 1);
     return {
         path: google.maps.SymbolPath.CIRCLE,
-        fillColor: share > 0.6 ? '#0d5b31' : share > 0.3 ? '#12703c' : '#2e8b57',
+        fillColor: share > 0.6 ? '#0a4c3a' : share > 0.3 ? '#0f6b52' : '#2f8a70',
         fillOpacity: 0.92,
         strokeColor: '#ffffff',
         strokeWeight: 2.5,
@@ -144,12 +144,12 @@ export function MapView({
         // cursor down a list reads as a highlight rather than as fourteen
         // separate selections.
         const fill = isSelected || isHovered
-            ? '#8a6410'
+            ? '#1b1d22'
             : provider.promoted
-                ? '#c9a84c'
+                ? '#0f6b52'
                 : provider.country === 'MX'
-                    ? '#12703c'
-                    : '#1544c9';
+                    ? '#3f6b52'
+                    : '#3f5570';
 
         return {
             path: google.maps.SymbolPath.CIRCLE,
@@ -184,40 +184,40 @@ export function MapView({
             .map((s) => t(`specialties.${s}`, { defaultValue: s }))
             .join(' · ');
         const side = p.country === 'MX' ? t('drawer.ciudadJuarez') : t('drawer.elPaso');
-        const accent = p.country === 'MX' ? '#12703c' : '#1544c9';
+        const accent = p.country === 'MX' ? '#3f6b52' : '#3f5570';
 
         const star =
-            '<svg width="13" height="13" viewBox="0 0 24 24" fill="#8a6410" style="flex-shrink:0">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="#b5760a" style="flex-shrink:0">' +
             '<path d="M12 3.6l2.6 5.3 5.85.85-4.23 4.12 1 5.83L12 16.95l-5.22 2.75 1-5.83L3.55 9.75 9.4 8.9z"/></svg>';
 
         return `
-      <div style="font-family:'Plus Jakarta Sans',system-ui,sans-serif;padding:13px 15px;max-width:265px;color:#080f1c;">
+      <div style="font-family:'Plus Jakarta Sans',system-ui,sans-serif;padding:13px 15px;max-width:265px;color:#14161a;">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
           <span style="width:7px;height:7px;border-radius:50%;background:${accent};flex-shrink:0;"></span>
           <span style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:${accent};">
             ${escapeHtml(side)}
           </span>
           ${p.promoted
-                ? '<span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#8a6410;border:1px solid #e2d3a8;border-radius:99px;padding:1px 6px;">'
+                ? '<span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#0f6b52;border:1px solid #b8ddd0;border-radius:99px;padding:1px 6px;">'
                 + escapeHtml(t('drawer.promoted')) + '</span>'
                 : ''}
         </div>
         <div style="font-size:15px;font-weight:700;line-height:1.3;margin-bottom:3px;">
           ${escapeHtml(p.name)}
         </div>
-        <div style="font-size:12px;color:#4a5a75;line-height:1.45;margin-bottom:8px;">
+        <div style="font-size:12px;color:#5c6068;line-height:1.45;margin-bottom:8px;">
           ${escapeHtml(specialties)}
         </div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:#080f1c;">
+        <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:#14161a;">
           ${star}
           <strong>${p.rating.toFixed(1)}</strong>
-          <span style="color:#4a5a75;">(${p.reviewCount.toLocaleString()})</span>
-          <span style="color:#c6cedb;">|</span>
-          <span style="color:#4a5a75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          <span style="color:#5c6068;">(${p.reviewCount.toLocaleString()})</span>
+          <span style="color:#cfcfcd;">|</span>
+          <span style="color:#5c6068;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
             ${escapeHtml(p.city)}
           </span>
         </div>
-        <div style="margin-top:9px;font-size:11px;font-weight:600;color:#8a6410;">
+        <div style="margin-top:9px;font-size:11px;font-weight:600;color:#0f6b52;">
           ${escapeHtml(t('map.clickForDetails'))}
         </div>
       </div>`;
@@ -559,7 +559,7 @@ export function MapView({
                 title: 'You are here',
                 icon: {
                     path: google.maps.SymbolPath.CIRCLE,
-                    fillColor: '#1544c9',
+                    fillColor: '#1b1d22',
                     fillOpacity: 1,
                     strokeColor: '#ffffff',
                     strokeWeight: 3,
@@ -667,43 +667,46 @@ export function MapView({
 }
 
 const darkMapStyles: google.maps.MapTypeStyle[] = [
-    { elementType: 'geometry', stylers: [{ color: '#0B1F3A' }] },
-    { elementType: 'labels.text.stroke', stylers: [{ color: '#0B1F3A' }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#a8b6cc' }] },
-    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#183256' }] },
-    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#0B1F3A' }] },
-    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#22467a' }] },
+    { elementType: 'geometry', stylers: [{ color: '#121316' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#121316' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#b0b1b4' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#33353b' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#121316' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#4a4d54' }] },
     { featureType: 'poi', stylers: [{ visibility: 'off' }] },
     { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#061020' }] },
-    { featureType: 'administrative.country', elementType: 'geometry.stroke', stylers: [{ color: '#C9A84C' }, { weight: 2 }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0a0b0d' }] },
+    { featureType: 'administrative.country', elementType: 'geometry.stroke', stylers: [{ color: '#4fc79f' }, { weight: 2 }] },
 ];
 
 /**
  * Light styles are tuned for contrast, not for the washed-out Google default:
- * near-black labels, white roads against a tinted land fill, and a saturated
- * water blue so the Rio Grande reads as the border at a glance.
+ * near-black labels and white roads against a tinted land fill. Under the
+ * Clinic White palette the map spends colour only on the border itself —
+ * the country stroke is the accent green, and the water is pulled toward
+ * the same hue so the Rio Grande reads as that line rather than competing
+ * with it.
  */
 const lightMapStyles: google.maps.MapTypeStyle[] = [
-    { elementType: 'geometry', stylers: [{ color: '#eef1f7' }] },
+    { elementType: 'geometry', stylers: [{ color: '#f0f0ee' }] },
     { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#2c3a52' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#2a2d33' }] },
     { elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }, { weight: 3 }] },
-    { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#aab7ca' }] },
+    { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#b6b6b2' }] },
     { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
-    { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#101a2c' }] },
-    { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#e6ebf3' }] },
+    { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#14161a' }] },
+    { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#e8e8e5' }] },
     { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#d5e8d5' }, { visibility: 'on' }] },
+    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#dfeae4' }, { visibility: 'on' }] },
     { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
-    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#c9d3e2' }] },
-    { featureType: 'road.arterial', elementType: 'labels.text.fill', stylers: [{ color: '#3d4c66' }] },
-    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#ffe9b0' }] },
-    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#e0bd6a' }] },
-    { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#1d2a41' }] },
-    { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#5d6d88' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#d6d6d3' }] },
+    { featureType: 'road.arterial', elementType: 'labels.text.fill', stylers: [{ color: '#3c4046' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#f4f3f0' }] },
+    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#cdccc7' }] },
+    { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#1d1f24' }] },
+    { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#6d7178' }] },
     { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#a8cbe8' }] },
-    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3d5f80' }] },
-    { featureType: 'administrative.country', elementType: 'geometry.stroke', stylers: [{ color: '#8a6410' }, { weight: 2.4 }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c7dbd4' }] },
+    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3f6b52' }] },
+    { featureType: 'administrative.country', elementType: 'geometry.stroke', stylers: [{ color: '#0f6b52' }, { weight: 2.4 }] },
 ];

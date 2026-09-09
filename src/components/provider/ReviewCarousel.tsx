@@ -176,7 +176,7 @@ function ReviewCard({ review }: { review: GoogleReview }) {
                         key={i}
                         size={13}
                         filled={i < review.rating}
-                        style={{ color: i < review.rating ? 'var(--gold)' : 'var(--gray-700)' }}
+                        style={{ color: i < review.rating ? 'var(--star)' : 'var(--gray-700)' }}
                     />
                 ))}
             </div>

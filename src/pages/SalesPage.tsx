@@ -174,7 +174,7 @@ export function SalesPage() {
                         ) : (
                             <StatTile icon={<IconClipboard size={24} />} value={String(stats.specialties)} label={t('sales.statsSpecialties')} accent="var(--gold)" />
                         )}
-                        <StatTile icon={<IconStar size={24} />} value={stats.avgRating} label={t('sales.statsRating')} accent="var(--gold)" />
+                        <StatTile icon={<IconStar size={24} />} value={stats.avgRating} label={t('sales.statsRating')} accent="var(--star)" />
                         <StatTile icon={<IconBorder size={24} />} value="2" label={t('sales.statsCities')} accent="var(--mx)" />
                     </div>
                 </Reveal>
@@ -563,7 +563,7 @@ function PricingCard({ tier, price, period, badge, features, featured = false, c
                         position: 'absolute', top: '-13px', left: '2.1rem',
                         display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
                         padding: '0.28rem 0.85rem', borderRadius: 'var(--radius-pill)',
-                        background: 'var(--gold-fill)', color: '#0b1f3a',
+                        background: 'var(--gold-fill)', color: 'var(--brand-identity)',
                         fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.07em',
                         whiteSpace: 'nowrap',
                     }}

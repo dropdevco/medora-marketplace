@@ -5,7 +5,12 @@
  * between) carrying a medical cross whose lower arm tapers into a map pin —
  * the product in one glyph: verified care, findable on a map.
  *
- * The gold rule bisecting the shield is the border itself.
+ * The rule bisecting the shield is the border itself.
+ *
+ * Every fill here is a token, never a literal. A hard-coded shield colour
+ * is how the old mark ended up invisible on the dark navbar: the fill and
+ * the ground behind it were the same hex. --mark-bg/--mark-fg invert with
+ * the theme; --accent, the seal ring, does not.
  */
 
 interface LogoMarkProps {
@@ -31,21 +36,21 @@ export function LogoMark({ size = 34, idle = false, className = '' }: LogoMarkPr
             {/* Shield body */}
             <path
                 d="M20 2.4 L35 7.8 V21 c0 8.6-6.1 15.4-15 17.6C11.1 36.4 5 29.6 5 21 V7.8 Z"
-                fill="var(--brand-mark-bg, #0B1F3A)"
+                fill="var(--mark-bg)"
             />
             {/* Border rule — the line the product exists to span */}
-            <path d="M5.6 20.4 H34.4" stroke="#C9A84C" strokeWidth="1.4" strokeDasharray="2.6 2.4" opacity="0.85" />
+            <path d="M5.6 20.4 H34.4" stroke="var(--accent)" strokeWidth="1.4" strokeDasharray="2.6 2.4" opacity="0.85" />
             {/* Cross, with the lower arm tapering into a pin point */}
             <path
                 d="M17.3 10.6 h5.4 v4.9 h4.9 v5.4 h-4.9 v4.4 L20 30.4 l-2.7-5.1 v-4.4 h-4.9 v-5.4 h4.9 Z"
-                fill="#FFFFFF"
+                fill="var(--mark-fg)"
             />
             {/* Pin dot */}
-            <circle cx="20" cy="18.2" r="1.9" fill="#0B1F3A" />
-            {/* Gold seal edge */}
+            <circle cx="20" cy="18.2" r="1.9" fill="var(--mark-bg)" />
+            {/* Seal edge — the one constant across both themes */}
             <path
                 d="M20 2.4 L35 7.8 V21 c0 8.6-6.1 15.4-15 17.6C11.1 36.4 5 29.6 5 21 V7.8 Z"
-                stroke="#C9A84C"
+                stroke="var(--accent)"
                 strokeWidth="1.6"
             />
         </svg>
@@ -75,7 +80,7 @@ export function Logo({ size = 34, markOnly = false, idle = false }: LogoProps) {
                         whiteSpace: 'nowrap',
                     }}
                 >
-                    Med<span style={{ color: 'var(--gold)' }}>Society</span>
+                    Med<span style={{ color: 'var(--accent)' }}>Society</span>
                 </span>
             )}
         </span>
