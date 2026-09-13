@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { Specialty } from '../../types/provider';
-import { SpecialtyIcon } from '../icons/Icons';
+import { SpecialtyIcon, specialtyColor } from '../icons/Icons';
 
 interface CategoryRailProps {
     /** Specialties in directory order, largest first. */
@@ -31,8 +31,16 @@ export function CategoryRail({ order, active, onToggle }: CategoryRailProps) {
                         aria-selected={on}
                         onClick={() => onToggle(s)}
                         className={`ms-cat${on ? ' is-active' : ''}`}
+                        // Each specialty carries its own hue here, on the icon
+                        // and on the active underline, so the rail is scanned
+                        // by colour rather than read word by word. The label
+                        // stays on the text ramp — tinting both would cost the
+                        // contrast the label needs to be legible at 0.72rem.
+                        style={{ ['--cat-c' as string]: specialtyColor(s) }}
                     >
-                        <SpecialtyIcon specialty={s} size={22} weight={1.7} />
+                        <span className="ms-cat-ico" aria-hidden="true">
+                            <SpecialtyIcon specialty={s} size={22} weight={1.7} />
+                        </span>
                         <span>{t(`specialties.${s}`)}</span>
                     </button>
                 );

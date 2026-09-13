@@ -96,6 +96,7 @@
     "listShort": "Lista",
     "mapShort": "Mapa",
     "searchThisArea": "Buscar en esta zona",
+    "searchAsIMove": "Buscar mientras muevo el mapa",
     "showingCapped": "Mostrando los {{shown}} primeros de {{total}} aquí. Acerca el mapa para verlos todos.",
     "showingInView": "Mostrando {{shown}} de {{total}} en el mapa. Aleja el mapa para ver el resto."
   },

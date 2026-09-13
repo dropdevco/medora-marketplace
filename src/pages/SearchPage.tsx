@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, lazy, Suspense, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef, lazy, Suspense, useEffect } from 'react';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useTranslation } from 'react-i18next';
 import { useProviders } from '../hooks/useProviders';
@@ -52,6 +52,21 @@ const ROW_GAP = 12;
  * is read off the filters, so the URL alone decides — a shared link to a search
  * opens on results, a shared link to `/` opens on the browse rows.
  */
+const AUTO_SEARCH_KEY = 'ms-map-follow';
+
+/**
+ * Default on. Read defensively: a browser with site data blocked throws on the
+ * accessor itself, and the page must still render with the default rather than
+ * fail on a preference.
+ */
+function readAutoSearch(): boolean {
+    try {
+        return localStorage.getItem(AUTO_SEARCH_KEY) !== '0';
+    } catch {
+        return true;
+    }
+}
+
 export function SearchPage() {
     const { t } = useTranslation();
     const {
@@ -64,6 +79,17 @@ export function SearchPage() {
     const searching = filters.search !== '' || activeCount > 0;
 
     const [view, setView] = useState<'list' | 'map'>('list');
+    /**
+     * Whether the results follow the map on their own.
+     *
+     * On by default — the whole point of a split view is that the two panels
+     * describe the same place, and a list that ignores where the map is
+     * pointing is just a list next to a picture. Persisted, because it is a
+     * working style rather than a per-search choice, and someone who turns it
+     * off to browse the whole directory should not have to turn it off again
+     * on the next search.
+     */
+    const [autoSearch, setAutoSearch] = useState(readAutoSearch);
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [heroOpen, setHeroOpen] = useState(false);
     /** The card under the cursor. Forwarded to the map, which lights its pin. */
@@ -213,6 +239,40 @@ export function SearchPage() {
             rowVirtualizer.scrollToIndex(index, { align: 'center', behavior: 'auto' });
         }
     }, [handleSelect, indexById, view, rowVirtualizer]);
+
+    /**
+     * Release the viewport whenever a non-spatial filter changes.
+     *
+     * The map refits to the results, but only while no `mapArea` is set — and
+     * with auto-follow on, one is always set. Without this the camera would
+     * stay welded wherever it last idled, so searching a clinic two
+     * neighbourhoods over, or picking a specialty with a handful of results,
+     * would return "nothing in this area" for results that plainly exist.
+     *
+     * Dropping the area lets the refit run; the next camera settle re-publishes
+     * the new box. `fitKey` already excludes `mapArea`, so this cannot re-fire
+     * on its own output.
+     */
+    const lastFitKey = useRef(fitKey);
+    useEffect(() => {
+        if (lastFitKey.current === fitKey) return;
+        lastFitKey.current = fitKey;
+        if (autoSearch && filters.mapArea) patchFilters({ mapArea: null }, true);
+    }, [fitKey, autoSearch, filters.mapArea, patchFilters]);
+
+    const handleAutoSearchChange = useCallback((next: boolean) => {
+        setAutoSearch(next);
+        try {
+            localStorage.setItem(AUTO_SEARCH_KEY, next ? '1' : '0');
+        } catch {
+            // Private mode, or site data blocked. The toggle still works for
+            // this session; only the memory of it is lost.
+        }
+        // Turning it off releases the viewport — otherwise the last camera box
+        // stays welded to the results with nothing on screen still claiming
+        // responsibility for it.
+        if (!next) patchFilters({ mapArea: null }, true);
+    }, [patchFilters]);
 
     /** "Search this area" — narrow the results to the current camera box. */
     const handleSearchArea = useCallback((box: MapBox) => {
@@ -389,6 +449,9 @@ export function SearchPage() {
                                     hoveredId={hoveredId}
                                     onProviderFocus={setFocusedId}
                                     onSearchArea={handleSearchArea}
+                                    onBoundsChange={handleSearchArea}
+                                    autoSearch={autoSearch}
+                                    onAutoSearchChange={handleAutoSearchChange}
                                     mapArea={filters.mapArea}
                                     fitKey={fitKey}
                                     onVisibleCountChange={handleVisibleCount}

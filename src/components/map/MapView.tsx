@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import { useTranslation } from 'react-i18next';
 import type { MapBox, Provider } from '../../types/provider';
-import { IconLocate, IconMapPin } from '../icons/Icons';
+import { IconLocate, IconMapPin, specialtyColor } from '../icons/Icons';
 
 /** Fallback view if we have no providers at all to derive bounds from. */
 const BORDER_CENTER = { lat: 31.738, lng: -106.455 };
@@ -20,9 +20,13 @@ const FIT_PADDING = 72;
 /**
  * How many pins may be on screen at once. Rendering ~4,000 individual pins is
  * what made the map slow to load and to pan, so the viewport plus this cap is
- * what keeps the marker count in the low hundreds instead.
+ * what keeps the marker count down instead.
+ *
+ * Low, because with "search as I move the map" on, the list shows exactly
+ * what is in frame — a cap far above what a person can read in the panel
+ * beside it only puts pins on screen with no row to match them to.
  */
-const DEFAULT_MAX_PINS = 150;
+const DEFAULT_MAX_PINS = 80;
 
 /**
  * How far the camera must move before "Search this area" is worth offering,
@@ -31,6 +35,13 @@ const DEFAULT_MAX_PINS = 150;
  * every twitch is noise.
  */
 const AREA_CHANGE_THRESHOLD = 0.15;
+
+/**
+ * How long the camera must sit still before an auto-search fires. A flick-pan
+ * settles several times on its way across the metro, and each settle is a
+ * re-filter of the whole directory plus a URL write.
+ */
+const CAMERA_DEBOUNCE_MS = 250;
 
 /**
  * The Google Maps JavaScript API key is intentionally public — it MUST be
@@ -61,6 +72,18 @@ interface MapViewProps {
     onProviderFocus?: (id: string | null) => void;
     /** Fires when the user presses "Search this area" with the current camera box. */
     onSearchArea?: (box: MapBox) => void;
+    /**
+     * Fires on every camera settle, debounced, when `autoSearch` is on. This is
+     * the continuous twin of `onSearchArea`: same payload, but the user never
+     * has to ask for it.
+     */
+    onBoundsChange?: (box: MapBox) => void;
+    /**
+     * Whether the results should track the viewport on their own. Owned by the
+     * page (it persists the choice), so the map only reads it.
+     */
+    autoSearch?: boolean;
+    onAutoSearchChange?: (next: boolean) => void;
     /** The active map-area filter, or null. */
     mapArea?: MapBox | null;
     /**
@@ -120,7 +143,8 @@ function escapeHtml(s: string): string {
 
 export function MapView({
     providers, allProviders, selectedProvider, onProviderSelect, hoveredId = null,
-    onProviderFocus, onSearchArea, mapArea = null, fitKey,
+    onProviderFocus, onSearchArea, onBoundsChange, autoSearch = false, onAutoSearchChange,
+    mapArea = null, fitKey,
     maxPins = DEFAULT_MAX_PINS, onVisibleCountChange,
 }: MapViewProps) {
     const { t } = useTranslation();
@@ -178,14 +202,16 @@ export function MapView({
         // Three states have to be tellable apart at a glance, on a pin eight
         // pixels across. Selected is a filled dark disc; hover inverts it —
         // white disc, heavy dark ring — so it reads as "this one" without
-        // reading as a second selection; everything else keeps its side-of-
-        // the-border tint. Hover used to share the selected fill and differ
-        // only by one pixel of radius, which was no signal at all.
+        // reading as a second selection. Hover used to share the selected fill
+        // and differ only by one pixel of radius, which was no signal at all.
+        //
+        // Idle pins are tinted by *specialty*, not by side of the border. The
+        // country was never the question anyone brought to the map — "where
+        // are the dentists" is — and the border is already drawn as a line, so
+        // spending the pin colour on it said the same thing twice.
         const idleFill = provider.promoted
             ? '#0f6b52'
-            : provider.country === 'MX'
-                ? '#3f6b52'
-                : '#3f5570';
+            : specialtyColor(provider.specialty[0]);
 
         return {
             path: google.maps.SymbolPath.CIRCLE,
@@ -673,8 +699,30 @@ export function MapView({
      * has to want map-area searches at all, and the camera has to sit somewhere
      * other than the area already being searched.
      */
-    const canSearchArea = Boolean(onSearchArea) && cameraBox !== null
+    const canSearchArea = Boolean(onSearchArea) && !autoSearch && cameraBox !== null
         && (!mapArea || movedMaterially(cameraBox, mapArea));
+
+    // ── Follow the camera ──────────────────────────────────────────────────
+    /**
+     * With auto-search on, every settle of the camera becomes the search area.
+     *
+     * Debounced rather than fired straight from 'idle' because a flick-pan
+     * settles several times on the way to where it is going, and each settle
+     * would otherwise be a full re-filter of ~4,000 rows plus a URL write.
+     *
+     * The `sameBox` guard is what keeps this from being a loop: publishing the
+     * camera box sets `mapArea` to that same box, which comes back in as a
+     * prop, and without the guard the effect would immediately republish it.
+     * The refit pass is already inert while `mapArea` is set, so the camera
+     * never moves in response to its own broadcast.
+     */
+    useEffect(() => {
+        if (!autoSearch || !cameraBox || !onBoundsChange) return;
+        if (mapArea && sameBox(cameraBox, mapArea)) return;
+
+        const id = window.setTimeout(() => onBoundsChange(cameraBox), CAMERA_DEBOUNCE_MS);
+        return () => window.clearTimeout(id);
+    }, [autoSearch, cameraBox, mapArea, onBoundsChange]);
 
     // ── No API key — static preview ───────────────────────────────────────
     if (!API_KEY) {
@@ -767,6 +815,40 @@ export function MapView({
                 <IconLocate size={21} />
             </button>
 
+            {onAutoSearchChange && (
+                <label
+                    className="ms-map-follow"
+                    style={{
+                        position: 'absolute',
+                        top: '16px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 0.9rem',
+                        borderRadius: 'var(--radius-pill)',
+                        background: 'var(--navy-800)',
+                        border: '1px solid var(--border-strong)',
+                        boxShadow: 'var(--shadow-sm)',
+                        color: 'var(--white)',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        zIndex: 10,
+                    }}
+                >
+                    <input
+                        type="checkbox"
+                        checked={autoSearch}
+                        onChange={(e) => onAutoSearchChange(e.target.checked)}
+                        style={{ width: '15px', height: '15px', accentColor: 'var(--accent)', cursor: 'pointer' }}
+                    />
+                    {t('map.searchAsIMove')}
+                </label>
+            )}
+
             {canSearchArea && (
                 <button
                     onClick={() => cameraBox && onSearchArea?.(cameraBox)}
@@ -795,47 +877,70 @@ export function MapView({
     );
 }
 
+/**
+ * The map is allowed to carry colour now.
+ *
+ * The previous pair spent colour only on the border stroke and left
+ * everything else grey, which read as a wireframe rather than as a place.
+ * These give water, parks and hospitals their own hues — the reference is
+ * Airbnb's map, where the land is warm, the water is genuinely blue, and
+ * green space is legible at a glance — while keeping two constraints from
+ * the old styles: commercial POIs stay off (they compete with our pins for
+ * the same meaning), and `administrative.country` keeps the accent stroke,
+ * because the border line is the product.
+ *
+ * `poi.medical` is the one POI category left visible. On a clinic directory
+ * a hospital on the map is context, not clutter.
+ */
 const darkMapStyles: google.maps.MapTypeStyle[] = [
-    { elementType: 'geometry', stylers: [{ color: '#121316' }] },
-    { elementType: 'labels.text.stroke', stylers: [{ color: '#121316' }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#b0b1b4' }] },
-    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#33353b' }] },
-    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#121316' }] },
-    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#4a4d54' }] },
+    { elementType: 'geometry', stylers: [{ color: '#1a1d21' }] },
+    { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#12151a' }, { weight: 3 }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#9aa0a8' }] },
+    { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#3a3f47' }] },
+    { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+    { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d7dade' }] },
+    { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#212429' }] },
+    { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#1e2430' }] },
     { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1c3b30' }, { visibility: 'on' }] },
+    { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#5f9e83' }] },
+    { featureType: 'poi.medical', elementType: 'geometry', stylers: [{ color: '#3a2630' }, { visibility: 'on' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#33363c' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1a1d21' }] },
+    { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#3e434a' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#6b5a34' }] },
+    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#1a1d21' }] },
+    { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#e2c98d' }] },
     { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0a0b0d' }] },
-    { featureType: 'administrative.country', elementType: 'geometry.stroke', stylers: [{ color: '#4fc79f' }, { weight: 2 }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#16303f' }] },
+    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#5b93ad' }] },
+    { featureType: 'administrative.country', elementType: 'geometry.stroke', stylers: [{ color: '#4fc79f' }, { weight: 2.4 }] },
 ];
 
-/**
- * Light styles are tuned for contrast, not for the washed-out Google default:
- * near-black labels and white roads against a tinted land fill. Under the
- * Clinic White palette the map spends colour only on the border itself —
- * the country stroke is the accent green, and the water is pulled toward
- * the same hue so the Rio Grande reads as that line rather than competing
- * with it.
- */
 const lightMapStyles: google.maps.MapTypeStyle[] = [
-    { elementType: 'geometry', stylers: [{ color: '#f0f0ee' }] },
+    { elementType: 'geometry', stylers: [{ color: '#f4f1ea' }] },
     { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#2a2d33' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#5a5f68' }] },
     { elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }, { weight: 3 }] },
-    { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#b6b6b2' }] },
+    { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#cfc9bd' }] },
     { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
     { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#14161a' }] },
-    { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#e8e8e5' }] },
+    { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#eeeae1' }] },
+    { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#e9e6db' }] },
     { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#dfeae4' }, { visibility: 'on' }] },
+    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#c6e0c4' }, { visibility: 'on' }] },
+    { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#3d7a4e' }] },
+    { featureType: 'poi.medical', elementType: 'geometry', stylers: [{ color: '#f3d9dd' }, { visibility: 'on' }] },
     { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
-    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#d6d6d3' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#e3ded2' }] },
     { featureType: 'road.arterial', elementType: 'labels.text.fill', stylers: [{ color: '#3c4046' }] },
-    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#f4f3f0' }] },
-    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#cdccc7' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#fbe6b4' }] },
+    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#e8cd93' }] },
     { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#1d1f24' }] },
     { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#6d7178' }] },
     { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c7dbd4' }] },
-    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3f6b52' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#a6cbe3' }] },
+    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#2f6d8f' }] },
     { featureType: 'administrative.country', elementType: 'geometry.stroke', stylers: [{ color: '#0f6b52' }, { weight: 2.4 }] },
 ];

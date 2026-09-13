@@ -867,11 +867,17 @@ select option {
   transition: color 0.18s var(--ease-out), border-color 0.18s var(--ease-out), opacity 0.18s var(--ease-out);
   opacity: 0.8;
 }
+.ms-cat-ico {
+  color: var(--cat-c, var(--gray-500));
+  display: flex;
+  transition: transform 0.18s var(--ease-out);
+}
 .ms-cat:hover { color: var(--white); opacity: 1; border-bottom-color: var(--border-strong); }
+.ms-cat:hover .ms-cat-ico { transform: translateY(-1px); }
 .ms-cat.is-active {
   color: var(--white);
   opacity: 1;
-  border-bottom-color: var(--white);
+  border-bottom-color: var(--cat-c, var(--white));
 }
 
 .ms-cats-band {

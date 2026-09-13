@@ -96,6 +96,7 @@
     "listShort": "List",
     "mapShort": "Map",
     "searchThisArea": "Search this area",
+    "searchAsIMove": "Search as I move the map",
     "showingCapped": "Showing the top {{shown}} of {{total}} here. Zoom in to see them all.",
     "showingInView": "Showing {{shown}} of {{total}} on the map. Zoom out to see the rest."
   },
