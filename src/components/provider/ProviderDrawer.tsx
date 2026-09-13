@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Provider } from '../../types/provider';
 import { ratingOf, ratingSource } from '../../utils/rating';
@@ -259,6 +260,31 @@ export function ProviderDrawer({ provider, onClose }: ProviderDrawerProps) {
                     <ServiceList services={provider.services ?? []} />
 
                     <ReviewCarousel reviews={reviews} loading={reviewsLoading} />
+
+                    {/*
+                      The only route from the public directory into the clinic
+                      portal, and it sits at the bottom of the listing rather
+                      than in the nav on purpose: the person who should see it
+                      is the one reading their own practice's page, not every
+                      patient in the header.
+
+                      Hidden once the listing is on a paid tier, which for now
+                      is the closest thing we have to "already claimed".
+                    */}
+                    {provider.tier === 'basic' && (
+                        <Link
+                            to={`/claim/${provider.id}`}
+                            style={{
+                                display: 'block', textAlign: 'center',
+                                padding: '0.7rem', borderRadius: 'var(--radius)',
+                                border: '1px dashed var(--border-strong)',
+                                color: 'var(--gray-400)', fontSize: '0.84rem',
+                                fontWeight: 650, textDecoration: 'none',
+                            }}
+                        >
+                            {t('drawer.claimThis')}
+                        </Link>
+                    )}
                 </div>
             </div>
         </>

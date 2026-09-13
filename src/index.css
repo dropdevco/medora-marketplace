@@ -1352,3 +1352,55 @@ select option {
 @media (max-width: 560px) {
   .ms-nav-cta { display: none; }
 }
+
+/* ─── Clinic portal ──────────────────────────────────── */
+/* Inputs are styled by element rather than by class so a Field can hold a
+   text input, a textarea or a select without knowing which. --border-strong,
+   not --border: on a control the border IS the affordance. */
+.ms-auth-card input,
+.ms-auth-card textarea,
+.ms-auth-card select {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--navy);
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+}
+.ms-auth-card textarea { min-height: 6.5rem; resize: vertical; line-height: 1.55; }
+.ms-auth-card input:focus,
+.ms-auth-card textarea:focus,
+.ms-auth-card select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+.ms-auth-card button[disabled] { opacity: 0.55; cursor: not-allowed; }
+
+/* A locked feature is shown, not hidden: the free tier has to be able to see
+   what the paid one buys, or the upgrade is an act of faith. */
+.ms-locked {
+  opacity: 0.5;
+  filter: grayscale(1);
+  pointer-events: none;
+  user-select: none;
+}
+
+
+/* Quieter than the CTA beside it: signing in is a return visit, listing a
+   clinic is the thing we are asking for. */
+.ms-nav-account {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--gray-400);
+  white-space: nowrap;
+  padding: 0.4rem 0.2rem;
+  transition: color 0.18s var(--ease-out);
+}
+.ms-nav-account:hover { color: var(--white); }
+
+@media (max-width: 700px) {
+  .ms-nav-account { display: none; }
+}

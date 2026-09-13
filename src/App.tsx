@@ -2,6 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
 import { SearchPage } from './pages/SearchPage';
 import { PricingPage } from './pages/PricingPage';
+import { LoginPage } from './pages/LoginPage';
+import { ClaimPage } from './pages/ClaimPage';
+import { DashboardPage } from './pages/DashboardPage';
 import './index.css';
 
 export default function App() {
@@ -11,6 +14,9 @@ export default function App() {
       <Routes>
         <Route path="/" element={<SearchPage />} />
         <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/claim/:providerId" element={<ClaimPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         {/*
           /sales was the clinic-facing page and is now /pricing. The old path
           is in sent emails and in the lead rows, so it redirects rather than

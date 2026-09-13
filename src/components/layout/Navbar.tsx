@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Logo } from '../brand/Logo';
 import { IconSun, IconMoon, IconLanguage } from '../icons/Icons';
+import { useSession } from '../../hooks/useSession';
 
 /**
  * Light is the product default. A previously stored preference still wins,
@@ -16,6 +17,7 @@ export function Navbar() {
     const { pathname } = useLocation();
     const { t, i18n } = useTranslation();
     const [theme, setTheme] = useState<string>(initialTheme);
+    const { session } = useSession();
 
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
@@ -64,6 +66,20 @@ export function Navbar() {
                     aria-current={pathname === '/pricing' ? 'page' : undefined}
                 >
                     {t('nav.listYourClinic')}
+                </Link>
+
+                {/*
+                  One link either way. Signed out it says "sign in"; signed in
+                  it goes to the dashboard — the destination is the same route
+                  and the guard there decides, so the nav never has to know
+                  whether a session is still loading.
+                */}
+                <Link
+                    to={session ? '/dashboard' : '/login'}
+                    className="ms-nav-account"
+                    aria-current={pathname === '/dashboard' ? 'page' : undefined}
+                >
+                    {session ? t('nav.myClinic') : t('nav.signIn')}
                 </Link>
 
                 {/*

@@ -320,6 +320,16 @@ export function IconShield(p: IconProps) {
     );
 }
 
+/** Marks a feature a plan has not bought yet. */
+export function IconLock(p: IconProps) {
+    return (
+        <Svg {...p}>
+            <rect x="4.4" y="10.4" width="15.2" height="10.4" rx="2.2" />
+            <path d="M8.2 10.4V7.6a3.8 3.8 0 017.6 0v2.8" />
+        </Svg>
+    );
+}
+
 export function IconClinic(p: IconProps) {
     return (
         <Svg {...p}>
