@@ -2,8 +2,10 @@ import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { importLibrary } from '@googlemaps/js-api-loader';
 import { useTranslation } from 'react-i18next';
 import type { MapBox, Provider } from '../../types/provider';
-import { IconLocate, IconMapPin, specialtyColor } from '../icons/Icons';
+import { IconLocate, IconMapPin } from '../icons/Icons';
+import { specialtyColor } from '../../utils/specialtyColors';
 import { MAPS_API_KEY as API_KEY } from '../../lib/googleMaps';
+import { ratingOf } from '../../utils/rating';
 
 /** Fallback view if we have no providers at all to derive bounds from. */
 const BORDER_CENTER = { lat: 31.738, lng: -106.455 };
@@ -174,6 +176,8 @@ export function MapView({
     const drawRef = useRef<() => void>(() => { });
 
     const providersById = useMemo(() => new Map(providers.map((p) => [p.id, p])), [providers]);
+    /** Boolean, not length: see the refit effect for why the distinction matters. */
+    const hasResults = providers.length > 0;
 
     /**
      * The pannable region is derived from every clinic we know about — not the
@@ -241,6 +245,14 @@ export function MapView({
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="#b5760a" style="flex-shrink:0">' +
             '<path d="M12 3.6l2.6 5.3 5.85.85-4.23 4.12 1 5.83L12 16.95l-5.22 2.75 1-5.83L3.55 9.75 9.4 8.9z"/></svg>';
 
+        // Same rule as the cards: never print 0.0 for a provider the source
+        // never rated. `rating.toFixed(1)` here was the last place saying it.
+        const rated = ratingOf(p);
+        const ratingHtml = rated === null
+            ? `<span style="color:#5c6068;">${escapeHtml(t('card.unrated'))}</span>`
+            : `${star}<strong>${rated.toFixed(1)}</strong>`
+              + `<span style="color:#5c6068;">(${p.reviewCount.toLocaleString()})</span>`;
+
         return `
       <div style="font-family:'Plus Jakarta Sans',system-ui,sans-serif;padding:13px 15px;max-width:265px;color:#14161a;">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
@@ -260,9 +272,7 @@ export function MapView({
           ${escapeHtml(specialties)}
         </div>
         <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:#14161a;">
-          ${star}
-          <strong>${p.rating.toFixed(1)}</strong>
-          <span style="color:#5c6068;">(${p.reviewCount.toLocaleString()})</span>
+          ${ratingHtml}
           <span style="color:#cfcfcd;">|</span>
           <span style="color:#5c6068;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
             ${escapeHtml(p.city)}
@@ -355,13 +365,29 @@ export function MapView({
      * old `providers`-keyed behaviour so the component still works standalone.
      */
     const fitDep = fitKey ?? providers;
+    /**
+     * Whether the camera has been framed for the current query yet.
+     *
+     * Auto-search must not publish a box the map has not aimed. On a cold load
+     * the providers arrive from Supabase after mount, so the first camera to
+     * settle is the default metro view — and with the list following the map,
+     * publishing that box filtered a text search down to whoever happened to
+     * fall inside the default frame. Searching a clinic by name returned
+     * nothing, having already found it.
+     *
+     * It needs no reset when the query changes: the fit effect below lists
+     * `fitDep` as a dependency, so it re-runs and re-frames before React
+     * yields to the browser — no camera event can land in between.
+     */
+    const framedRef = useRef(false);
+
     useEffect(() => {
         if (!mapInstance) return;
         // Selecting a clinic has its own camera move; don't fight it.
-        if (selectedProvider) return;
+        if (selectedProvider) { framedRef.current = true; return; }
         // A map-area search means the user chose this camera. Refitting would
         // move it out from under them, and then filter on where it landed.
-        if (mapArea) return;
+        if (mapArea) { framedRef.current = true; return; }
 
         const list = providersRef.current;
         const box = boundsOf(list);
@@ -371,6 +397,7 @@ export function MapView({
         if (list.length === 1) {
             mapInstance.setCenter({ lat: list[0].lat, lng: list[0].lng });
             mapInstance.setZoom(14);
+            framedRef.current = true;
             return;
         }
 
@@ -381,8 +408,13 @@ export function MapView({
             ),
             FIT_PADDING,
         );
-        // Refit whenever the result set changes — that is the point of the filter.
-    }, [mapInstance, fitDep, selectedProvider, mapArea]);
+        framedRef.current = true;
+        // `hasResults` rather than `providers`: the ratchet this effect exists
+        // to avoid comes from refitting on every identity change among
+        // non-empty lists, but the empty -> non-empty transition is the initial
+        // data load, and skipping that left the map parked on its default view
+        // for the whole session.
+    }, [mapInstance, fitDep, hasResults, selectedProvider, mapArea]);
 
     // ── Container resize ───────────────────────────────────────────────────
     /**
@@ -706,7 +738,12 @@ export function MapView({
      * never moves in response to its own broadcast.
      */
     useEffect(() => {
-        if (!autoSearch || !cameraBox || !onBoundsChange) return;
+        // A ref, so framing does not cost a render. The re-trigger is
+        // `cameraBox`: fitting moves the camera, which idles, which sets it.
+        // The one gap is a fit that lands exactly where the camera already is,
+        // which fires no idle — the map then simply does not filter until the
+        // user touches it, which is the safe direction to fail in.
+        if (!autoSearch || !cameraBox || !onBoundsChange || !framedRef.current) return;
         if (mapArea && sameBox(cameraBox, mapArea)) return;
 
         const id = window.setTimeout(() => onBoundsChange(cameraBox), CAMERA_DEBOUNCE_MS);

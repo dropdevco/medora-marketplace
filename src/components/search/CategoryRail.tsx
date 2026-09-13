@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { Specialty } from '../../types/provider';
-import { SpecialtyIcon, specialtyColor } from '../icons/Icons';
+import { SpecialtyIcon } from '../icons/Icons';
+import { specialtyColor } from '../../utils/specialtyColors';
 import { ScrollRail } from './ScrollRail';
 
 interface CategoryRailProps {

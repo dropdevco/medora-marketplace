@@ -48,7 +48,7 @@ export function buildFacets(
             for (const l of p.languages ?? []) bump(language, l);
         }
         if (matchesFilters(p, filters, ctx, 'bookableOnly') && p.bookingUrl) bookable++;
-        if (matchesFilters(p, filters, ctx, 'verifiedOnly') && p.verified) verified++;
+        if (matchesFilters(p, filters, ctx, 'verifiedOnly') && p.licensed) verified++;
         if (matchesFilters(p, filters, ctx, 'withPricing') && p.priceFromMxn != null) withPricing++;
     }
 

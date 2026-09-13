@@ -122,7 +122,19 @@
     "services": "Services & prices",
     "servicesMore": "+{{count}} more",
     "servicePriceFrom": "from {{price}}",
-    "serviceDisclaimer": "Prices are as published by the provider and may have changed. Confirm before booking."
+    "serviceDisclaimer": "Prices are as published by the provider and may have changed. Confirm before booking.",
+    "licensed": "Cédula profesional",
+    "reviewsOn": {
+      "doctoralia": "Doctoralia opinions",
+      "google": "Google reviews",
+      "other": "Reviews"
+    },
+    "photos": "Photos",
+    "photoAlt": "Clinic photo",
+    "bookOnline": "Book an appointment",
+    "photoPrev": "Previous photo",
+    "photoNext": "Next photo",
+    "photoCount": "{{index}} of {{total}}"
   },
   "specialties": {
     "dentist": "Dentist",
@@ -224,10 +236,17 @@
     "es": "Spanish"
   },
   "card": {
-    "priceFrom": "From {{price}}"
+    "priceFrom": "From {{price}}",
+    "unrated": "New · no reviews yet",
+    "new": "New",
+    "reviewsFrom": {
+      "doctoralia": "({{formatted}} opinions on Doctoralia)",
+      "google": "({{formatted}} Google reviews)",
+      "other": "({{formatted}} reviews)"
+    }
   },
   "discover": {
-    "heroTitle": "Care on both sides of the border",
+    "heroTitle": "Find a clinic in El Paso or Ciudad Juárez",
     "heroSubtitle": "Search 4,000 clinics and specialists across El Paso and Ciudad Juárez. Compare ratings, published prices and insurance before you call.",
     "scrollBack": "Show previous",
     "scrollOn": "Show more",

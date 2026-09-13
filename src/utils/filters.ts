@@ -2,6 +2,7 @@ import type { Provider, ProviderFilters, SortMode } from '../types/provider';
 import type { SearchDoc } from './search';
 import { scoreDoc } from './search';
 import { distanceKm, DEFAULT_RADIUS_KM } from './geo';
+import { shrunkScore, isRated } from './rating';
 
 export const defaultFilters: ProviderFilters = {
     search: '',
@@ -58,6 +59,12 @@ export interface FilterContext {
     terms: string[];
     /** Centre of the searched postal code, or null when we don't know the code. */
     centre: { lat: number; lng: number } | null;
+    /**
+     * Mean rating across the whole directory — the prior the confidence-weighted
+     * sort shrinks toward. Passed in rather than derived here so the 4,000-row
+     * average is computed once per directory load, not once per sort.
+     */
+    prior: number;
 }
 
 /**
@@ -111,7 +118,13 @@ export function matchesFilters(
 
     if (!skipped('country') && filters.country && p.country !== filters.country) return false;
 
-    if (!skipped('minRating') && p.rating < filters.minRating) return false;
+    if (!skipped('minRating') && filters.minRating > 0) {
+        // An unrated provider is excluded rather than compared. Nearly half the
+        // directory stores "never rated" as a 0, and treating that as a score
+        // made "4.5+ stars" mean "4.5+, and also everyone we know nothing
+        // about is definitely worse than one star".
+        if (!isRated(p) || p.rating < filters.minRating) return false;
+    }
 
     if (!skipped('insurances') && filters.insurances.length) {
         const held = p.insurances ?? [];
@@ -125,7 +138,17 @@ export function matchesFilters(
 
     if (!skipped('bookableOnly') && filters.bookableOnly && !p.bookingUrl) return false;
 
-    if (!skipped('verifiedOnly') && filters.verifiedOnly && !p.verified) return false;
+    /**
+     * Filters on the licence, not on the plan.
+     *
+     * The chip has always been labelled "Verified credentials", and a licence
+     * number scraped off the source profile is exactly that. What changed is
+     * where that fact is stored: `verified` now means "is paying", which
+     * nobody is yet, so pointing this axis at it would leave the chip
+     * permanently at zero and the credential filter gone. The URL parameter
+     * stays `verified=1` so existing links keep working.
+     */
+    if (!skipped('verifiedOnly') && filters.verifiedOnly && !p.licensed) return false;
 
     if (!skipped('withPricing') && filters.withPricing) {
         if (p.priceFromMxn == null) return false;
@@ -184,7 +207,28 @@ export function applyFilters(
     const byDistance = (a: Provider, b: Provider) =>
         (distances.get(a.id) ?? Infinity) - (distances.get(b.id) ?? Infinity);
 
+    /**
+     * Hand-curated rows, above everything, on the default browse only.
+     *
+     * The directory's first screen is its shop window, and until clinics start
+     * supplying their own photography the only listings that look like a
+     * product are the ones the team has looked at. `featuredRank` is how they
+     * say so without a deploy.
+     *
+     * Deliberately inert the moment the user expresses an intent — an explicit
+     * sort or a text query means they asked for a specific order, and quietly
+     * holding twelve curated rows above it would be a worse lie than an ugly
+     * first screen.
+     */
+    const curated = filters.sort === 'relevance' && ctx.terms.length === 0;
+
     kept.sort((a, b) => {
+        if (curated) {
+            const ra = a.featuredRank ?? Infinity;
+            const rb = b.featuredRank ?? Infinity;
+            if (ra !== rb) return ra - rb;
+        }
+
         // Promoted listings hold the top tier in every order. That is the deal
         // they paid for, and it is why it sits above the sort choice.
         if (a.promoted !== b.promoted) return a.promoted ? -1 : 1;
@@ -217,10 +261,22 @@ export function applyFilters(
                 break;
         }
 
-        // Rating is the universal tiebreak, then review volume so a lone
-        // 5.0 review doesn't outrank a 4.8 with three hundred.
-        const byRating = (b.rating || 0) - (a.rating || 0);
-        if (byRating !== 0) return byRating;
+        /**
+         * Rating is the universal tiebreak — but the confidence-weighted one,
+         * not the raw value.
+         *
+         * Doctoralia quantises to whole stars and 94% of its rated profiles
+         * are exactly 5.0, so a raw comparison is a coin flip resolved by
+         * review count, and the top of every list was a wall of indistinguish-
+         * able five-star entries. The shrunk score pulls a rating toward the
+         * directory mean in proportion to how little evidence stands behind
+         * it, so 4.7 across eight hundred reviews outranks 5.0 across two.
+         *
+         * Unrated providers score below every rated one. They are not bad;
+         * they are unknown, and unknown belongs after known in a ranking.
+         */
+        const d = shrunkScore(b, ctx.prior) - shrunkScore(a, ctx.prior);
+        if (Math.abs(d) > 0.0001) return d;
         return (b.reviewCount || 0) - (a.reviewCount || 0);
     });
 

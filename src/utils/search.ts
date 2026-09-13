@@ -241,16 +241,21 @@ export function scoreDoc(doc: SearchDoc, terms: readonly string[]): number {
 }
 
 /**
- * Rating, review volume and verification, as a gentle multiplier.
+ * Rating, review volume and credentials, as a gentle multiplier.
  *
  * Deliberately narrow (roughly 1.0–1.4). Quality should break ties between
  * comparable matches, never float a weak match above a strong one — a clinic
  * with 900 reviews still should not outrank the doctor you typed the name of.
+ *
+ * The credential term reads `licensed`, not `verified`: `verified` now means
+ * "is paying", and a paid plan buying a nudge in *text relevance* is not a
+ * deal anyone agreed to. Placement is what a plan buys, and that is applied
+ * once, visibly, in applyFilters.
  */
 function qualityOf(p: Provider): number {
     const reviews = Math.log1p(Math.max(0, p.reviewCount || 0)) / Math.log1p(1000); // ~0–1
     const rating = Math.max(0, Math.min(2, (p.rating || 0) - 3)) / 2;               // 0–1
-    return 1 + 0.15 * reviews + 0.15 * rating + (p.verified ? 0.05 : 0);
+    return 1 + 0.15 * reviews + 0.15 * rating + (p.licensed ? 0.05 : 0);
 }
 
 /**

@@ -1325,3 +1325,7 @@ select option {
 @media (hover: none) {
   .ms-rail-arrow { display: none; }
 }
+
+/* Google's photographer attribution arrives as its own anchor markup; on the
+   dark lightbox scrim the default link colour is unreadable. */
+.ms-photo-credit a { color: rgba(255, 255, 255, 0.82); text-decoration: underline; }

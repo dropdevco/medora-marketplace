@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Provider } from '../../types/provider';
 import { portraitUrl, hueOf } from '../../utils/images';
+import { ratingOf, ratingSource } from '../../utils/rating';
 import {
     IconStar, IconMapPin, IconChevronRight, IconPromoted,
     IconVerified, IconClipboard, SpecialtyIcon, CountryIcon,
@@ -31,7 +33,22 @@ const INSURANCE_CHIPS = 2;
 
 export function ProviderCard({ provider, selected, onClick, distance, onHover, focused = false }: ProviderCardProps) {
     const { t } = useTranslation();
-    const photo = portraitUrl(provider.imageUrl);
+    /**
+     * A photo that 404s used to hide its own <img> and leave a blank 74px box,
+     * because the monogram class was only applied on the no-photo branch. So
+     * the cards most likely to be missing a picture were the ones that showed
+     * nothing at all rather than the fallback built for exactly that case.
+     */
+    const [broken, setBroken] = useState(false);
+    const src = portraitUrl(provider.imageUrl);
+    const photo = broken ? undefined : src;
+
+    // A new provider in a recycled card must not inherit the old one's failure.
+    const [seenSrc, setSeenSrc] = useState(src);
+    if (src !== seenSrc) {
+        setSeenSrc(src);
+        setBroken(false);
+    }
 
     const accent = provider.country === 'MX' ? 'var(--mx)' : 'var(--us)';
     const accentSoft = provider.country === 'MX' ? 'var(--mx-soft)' : 'var(--us-soft)';
@@ -102,7 +119,7 @@ export function ProviderCard({ provider, selected, onClick, distance, onHover, f
                         alt=""
                         loading="lazy"
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        onError={() => setBroken(true)}
                     />
                 ) : (
                     <SpecialtyIcon specialty={provider.specialty[0]} size={30} weight={1.6} />
@@ -121,11 +138,24 @@ export function ProviderCard({ provider, selected, onClick, distance, onHover, f
                             <IconPromoted size={10} weight={2} /> {t('drawer.promoted')}
                         </Badge>
                     )}
-                    {provider.verified && (
-                        <Badge bg="var(--surface)" fg="var(--gray-300)">
+                    {/*
+                      Two different claims, and they used to be one badge.
+                      "Verified" is what a paid listing buys; `licensed` is a
+                      professional licence number we scraped off the source
+                      profile. The second was driving the gold badge for 1,720
+                      of 4,067 providers, which made the badge the directory's
+                      default state and gave away the only visible thing a plan
+                      was selling. Same fact, honest label, quieter styling.
+                    */}
+                    {provider.verified ? (
+                        <Badge bg="var(--gold-dim)" fg="var(--gold)">
                             <IconVerified size={11} weight={2} /> {t('drawer.verified')}
                         </Badge>
-                    )}
+                    ) : provider.licensed ? (
+                        <Badge bg="var(--surface)" fg="var(--gray-400)">
+                            <IconVerified size={11} weight={2} /> {t('drawer.licensed')}
+                        </Badge>
+                    ) : null}
                     <Badge bg={accentSoft} fg={accent}>
                         <CountryIcon country={provider.country} size={11} weight={2} /> {sideLabel}
                     </Badge>
@@ -149,7 +179,7 @@ export function ProviderCard({ provider, selected, onClick, distance, onHover, f
                     display: 'flex', alignItems: 'center', gap: '0.85rem',
                     flexWrap: 'nowrap', overflow: 'hidden',
                 }}>
-                    <RatingBadge rating={provider.rating} count={provider.reviewCount} />
+                    <RatingBadge provider={provider} />
 
                     <span style={{
                         display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0,
@@ -231,7 +261,41 @@ function Badge({ bg, fg, outlined, children }: {
     );
 }
 
-export function RatingBadge({ rating, count }: { rating: number; count: number }) {
+/**
+ * The one place a star rating is drawn, so every surface tells the same story.
+ *
+ * Two things it refuses to do. It will not print "0.0 (0)" for the 1,849
+ * providers ingest stored as `rating: 0` because the source published no
+ * rating — an absent rating is not a one-star rating, and rendering it as one
+ * libelled nearly half the directory. And it will not print a bare number for
+ * a source that measures differently from the other: Doctoralia averages
+ * patient opinions on a whole-star scale, Google averages Google reviews, and
+ * "5.0" alone invites a comparison between two things that are not the same
+ * measurement. `size="full"` spells the provenance out; the compact form just
+ * counts, because a result card has no room for a sentence.
+ */
+export function RatingBadge({ provider, size = 'compact' }: {
+    provider: Provider;
+    size?: 'compact' | 'full';
+}) {
+    const { t } = useTranslation();
+    const rating = ratingOf(provider);
+
+    if (rating === null) {
+        return (
+            <span style={{
+                display: 'flex', alignItems: 'center', gap: '0.28rem',
+                fontSize: '0.82rem', flexShrink: 0, color: 'var(--gray-400)',
+                fontWeight: 600,
+            }}>
+                {t('card.unrated')}
+            </span>
+        );
+    }
+
+    const count = provider.reviewCount.toLocaleString();
+    const source = ratingSource(provider);
+
     return (
         <span style={{
             display: 'flex', alignItems: 'center', gap: '0.28rem',
@@ -239,7 +303,11 @@ export function RatingBadge({ rating, count }: { rating: number; count: number }
         }}>
             <IconStar size={14} filled style={{ color: 'var(--star)' }} />
             <strong style={{ color: 'var(--white)', fontWeight: 800 }}>{rating.toFixed(1)}</strong>
-            <span style={{ color: 'var(--gray-400)' }}>({count.toLocaleString()})</span>
+            <span style={{ color: 'var(--gray-400)' }}>
+                {size === 'full'
+                    ? t(`card.reviewsFrom.${source}`, { count: provider.reviewCount, formatted: count })
+                    : `(${count})`}
+            </span>
         </span>
     );
 }

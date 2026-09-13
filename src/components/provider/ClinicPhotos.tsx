@@ -1,5 +1,7 @@
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGooglePhotos } from '../../hooks/useGooglePhotos';
+import { PhotoLightbox, type LightboxPhoto } from './PhotoLightbox';
 
 /**
  * Photos of the practice, pulled live from the provider's Google listing.
@@ -9,13 +11,29 @@ import { useGooglePhotos } from '../../hooks/useGooglePhotos';
  * expire. Fetching on open (and caching for the session) keeps us inside the
  * terms and avoids serving broken images.
  */
-export function ClinicPhotos({ placeId }: { placeId?: string }) {
+export function ClinicPhotos({ placeId, portrait }: { placeId?: string; portrait?: string }) {
     const { t } = useTranslation();
-    const { photos, loading } = useGooglePhotos(placeId);
+    const { photos: googlePhotos, loading } = useGooglePhotos(placeId);
+    const [open, setOpen] = useState<number | null>(null);
+
+    /**
+     * The provider's own portrait leads, when it has a real one.
+     *
+     * Google photos only exist for the 1,390 providers carrying a
+     * `googlePlaceId`; the 1,044 with a usable `imageUrl` are a different set.
+     * Keying the whole section off `placeId` alone meant a provider whose photo
+     * was already on its result card had no gallery here at all, which is the
+     * "pictures on the detail page but not the card" complaint seen from the
+     * other side.
+     */
+    const photos: LightboxPhoto[] = useMemo(
+        () => (portrait ? [{ url: portrait }, ...googlePhotos] : googlePhotos),
+        [portrait, googlePhotos],
+    );
 
     // Nothing to show and nothing pending — render no heading at all rather
     // than an empty section.
-    if (!placeId || (!loading && photos.length === 0)) return null;
+    if (photos.length === 0 && !(placeId && loading)) return null;
 
     return (
         <section>
@@ -26,10 +44,10 @@ export function ClinicPhotos({ placeId }: { placeId?: string }) {
                     margin: '0 0 0.65rem',
                 }}
             >
-                {t('drawer.photos', { defaultValue: 'Photos' })}
+                {t('drawer.photos')}
             </h3>
 
-            {loading ? (
+            {loading && photos.length === 0 ? (
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                     {[0, 1, 2].map((i) => (
                         <div
@@ -51,20 +69,38 @@ export function ClinicPhotos({ placeId }: { placeId?: string }) {
                         }}
                     >
                         {photos.map((photo, i) => (
-                            <img
+                            <button
                                 key={photo.url}
-                                src={photo.url}
-                                alt={t('drawer.photoAlt', { defaultValue: 'Clinic photo' }) + ` ${i + 1}`}
-                                loading="lazy"
+                                onClick={() => setOpen(i)}
+                                aria-label={`${t('drawer.photoAlt')} ${i + 1}`}
                                 style={{
-                                    width: 148, height: 104, flexShrink: 0,
-                                    objectFit: 'cover', borderRadius: 'var(--radius)',
-                                    scrollSnapAlign: 'start',
-                                    background: 'var(--gray-100, rgba(128,128,128,0.12))',
+                                    padding: 0, border: 'none', background: 'none',
+                                    flexShrink: 0, cursor: 'zoom-in', lineHeight: 0,
+                                    borderRadius: 'var(--radius)', scrollSnapAlign: 'start',
                                 }}
-                            />
+                            >
+                                <img
+                                    src={photo.url}
+                                    alt={`${t('drawer.photoAlt')} ${i + 1}`}
+                                    loading="lazy"
+                                    style={{
+                                        width: 148, height: 104,
+                                        objectFit: 'cover', borderRadius: 'var(--radius)',
+                                        background: 'var(--gray-100, rgba(128,128,128,0.12))',
+                                    }}
+                                />
+                            </button>
                         ))}
                     </div>
+
+                    {open !== null && (
+                        <PhotoLightbox
+                            photos={photos}
+                            index={open}
+                            onIndex={setOpen}
+                            onClose={() => setOpen(null)}
+                        />
+                    )}
 
                     {/*
                       Google requires the photographer attribution it supplies to

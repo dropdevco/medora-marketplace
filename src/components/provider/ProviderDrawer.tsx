@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Provider } from '../../types/provider';
+import { ratingOf, ratingSource } from '../../utils/rating';
+import { portraitUrl } from '../../utils/images';
 import { useGoogleReviews } from '../../hooks/useGoogleReviews';
 import { ReviewCarousel } from './ReviewCarousel';
 import { ClinicPhotos } from './ClinicPhotos';
@@ -31,6 +33,8 @@ export function ProviderDrawer({ provider, onClose }: ProviderDrawerProps) {
 
     if (!provider) return null;
 
+    const rating = ratingOf(provider);
+    const portrait = portraitUrl(provider.imageUrl);
     const specialtyLabel = (s: string) => t(`specialties.${s}`, { defaultValue: s });
     const accent = provider.country === 'MX' ? 'var(--mx)' : 'var(--us)';
     const accentSoft = provider.country === 'MX' ? 'var(--mx-soft)' : 'var(--us-soft)';
@@ -81,14 +85,23 @@ export function ProviderDrawer({ provider, onClose }: ProviderDrawerProps) {
                                         fg="var(--on-brand)"
                                     />
                                 )}
-                                {provider.verified && (
+                                {/* Paid plan and professional licence are two
+                                    different claims — see ProviderCard. */}
+                                {provider.verified ? (
                                     <Badge
                                         icon={<IconVerified size={11} weight={2} />}
                                         label={t('drawer.verified')}
-                                        bg="var(--mx-soft)"
-                                        fg="var(--green)"
+                                        bg="var(--gold-dim)"
+                                        fg="var(--gold)"
                                     />
-                                )}
+                                ) : provider.licensed ? (
+                                    <Badge
+                                        icon={<IconVerified size={11} weight={2} />}
+                                        label={t('drawer.licensed')}
+                                        bg="var(--surface)"
+                                        fg="var(--gray-400)"
+                                    />
+                                ) : null}
                                 <Badge
                                     icon={<CountryIcon country={provider.country} size={11} weight={2} />}
                                     label={provider.country === 'MX' ? t('drawer.ciudadJuarez') : t('drawer.elPaso')}
@@ -98,15 +111,31 @@ export function ProviderDrawer({ provider, onClose }: ProviderDrawerProps) {
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.7rem' }}>
+                                {/*
+                                  The drawer never showed the portrait the
+                                  result card had just shown, so clicking a
+                                  card with a photo opened a panel without one.
+                                  Same source, same placeholder rules.
+                                */}
                                 <div
                                     style={{
-                                        width: 40, height: 40, borderRadius: 11, flexShrink: 0,
-                                        background: accentSoft, color: accent,
-                                        border: `1px solid ${accent}`,
+                                        width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                                        overflow: 'hidden',
+                                        background: portrait ? 'var(--surface)' : accentSoft,
+                                        color: accent,
+                                        border: `1px solid ${portrait ? 'var(--border)' : accent}`,
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     }}
                                 >
-                                    <SpecialtyIcon specialty={provider.specialty[0]} size={21} />
+                                    {portrait ? (
+                                        <img
+                                            src={portrait}
+                                            alt=""
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        />
+                                    ) : (
+                                        <SpecialtyIcon specialty={provider.specialty[0]} size={21} />
+                                    )}
                                 </div>
                                 <div style={{ minWidth: 0 }}>
                                     <h2 style={{ fontSize: '1.3rem', fontWeight: 800, lineHeight: 1.25, letterSpacing: '-0.015em' }}>
@@ -151,14 +180,17 @@ export function ProviderDrawer({ provider, onClose }: ProviderDrawerProps) {
                     >
                         <StatBox
                             icon={<IconStar size={19} filled style={{ color: 'var(--star)' }} />}
-                            value={provider.rating.toFixed(1)}
-                            label={t('drawer.rating')}
+                            value={rating !== null ? rating.toFixed(1) : '—'}
+                            label={rating !== null ? t('drawer.rating') : t('card.unrated')}
                         />
                         <Divider />
                         <StatBox
                             icon={<IconReviews size={19} style={{ color: 'var(--gray-500)' }} />}
                             value={provider.reviewCount.toLocaleString()}
-                            label={t('drawer.reviews')}
+                            // Which site the reviews are on is the difference
+                            // between "5.0 from 1,341 patient opinions" and a
+                            // number the reader has no way to weigh.
+                            label={t(`drawer.reviewsOn.${ratingSource(provider)}`)}
                         />
                         <Divider />
                         <StatBox
@@ -216,11 +248,11 @@ export function ProviderDrawer({ provider, onClose }: ProviderDrawerProps) {
                                 textDecoration: 'none',
                             }}
                         >
-                            {t('drawer.bookOnline', { defaultValue: 'Book an appointment' })}
+                            {t('drawer.bookOnline')}
                         </a>
                     )}
 
-                    <ClinicPhotos placeId={provider.googlePlaceId} />
+                    <ClinicPhotos placeId={provider.googlePlaceId} portrait={portrait} />
 
                     <InsuranceList insurances={provider.insurances ?? []} />
 

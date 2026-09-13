@@ -122,7 +122,19 @@
     "services": "Servicios y precios",
     "servicesMore": "+{{count}} más",
     "servicePriceFrom": "desde {{price}}",
-    "serviceDisclaimer": "Los precios son los publicados por el proveedor y pueden haber cambiado. Confirma antes de agendar."
+    "serviceDisclaimer": "Los precios son los publicados por el proveedor y pueden haber cambiado. Confirma antes de agendar.",
+    "licensed": "Cédula profesional",
+    "reviewsOn": {
+      "doctoralia": "Opiniones en Doctoralia",
+      "google": "Reseñas de Google",
+      "other": "Reseñas"
+    },
+    "photos": "Fotos",
+    "photoAlt": "Foto de la clínica",
+    "bookOnline": "Agendar una cita",
+    "photoPrev": "Foto anterior",
+    "photoNext": "Foto siguiente",
+    "photoCount": "{{index}} de {{total}}"
   },
   "specialties": {
     "dentist": "Dentista",
@@ -224,10 +236,17 @@
     "es": "Español"
   },
   "card": {
-    "priceFrom": "Desde {{price}}"
+    "priceFrom": "Desde {{price}}",
+    "unrated": "Nuevo · sin reseñas todavía",
+    "new": "Nuevo",
+    "reviewsFrom": {
+      "doctoralia": "({{formatted}} opiniones en Doctoralia)",
+      "google": "({{formatted}} reseñas de Google)",
+      "other": "({{formatted}} reseñas)"
+    }
   },
   "discover": {
-    "heroTitle": "Atención médica a ambos lados de la frontera",
+    "heroTitle": "Encuentra una clínica en El Paso o Ciudad Juárez",
     "heroSubtitle": "Busca entre 4,000 clínicas y especialistas en El Paso y Ciudad Juárez. Compara calificaciones, precios publicados y seguros antes de llamar.",
     "scrollBack": "Ver anteriores",
     "scrollOn": "Ver más",

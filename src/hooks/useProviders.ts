@@ -9,6 +9,7 @@ import { DEFAULT_RADIUS_KM } from '../utils/geo';
 import { buildSearchIndex, tokenize } from '../utils/search';
 import { buildVocabulary, buildFacets } from '../utils/facets';
 import { applyFilters, defaultFilters, type FilterContext } from '../utils/filters';
+import { priorMean } from '../utils/rating';
 import { resolvePostal, type PostalHit } from '../utils/postalGeocode';
 
 const SPECIALTY_KEYS = new Set(Object.keys(SpecialtyLabels));
@@ -33,6 +34,9 @@ function normalizeProvider(row: any): Provider {
         postalCode:    row.postalCode    ?? row.postalcode    ?? undefined,
         services:      row.services      ?? [],
         priceFromMxn:  row.priceFromMxn  ?? row.pricefrommxn  ?? undefined,
+        featuredRank:  row.featuredRank  ?? row.featuredrank  ?? undefined,
+        tier:          row.tier ?? 'basic',
+        licensed:      row.licensed ?? false,
         // Trimmed here, once, so the insurance facet groups "GNP " with "GNP"
         // instead of offering both as separate options.
         insurances: (row.insurances ?? [])
@@ -334,9 +338,16 @@ export function useProviders() {
         return { lat: remote.hits[0].lat, lng: remote.hits[0].lng };
     }, [filters.postalCode, localCentre, remote]);
 
+    /**
+     * The directory's own mean rating, computed once per load. It is the prior
+     * the confidence-weighted sort shrinks toward, so it has to describe this
+     * directory rather than a constant someone guessed.
+     */
+    const prior = useMemo(() => priorMean(allProviders), [allProviders]);
+
     const ctx: FilterContext = useMemo(
-        () => ({ index: searchIndex, terms: tokenize(filters.search), centre }),
-        [searchIndex, filters.search, centre],
+        () => ({ index: searchIndex, terms: tokenize(filters.search), centre, prior }),
+        [searchIndex, filters.search, centre, prior],
     );
 
     const filtered = useMemo(
@@ -351,8 +362,8 @@ export function useProviders() {
      * this 4k-row pass off the per-keystroke path.
      */
     const facetCtx: FilterContext = useMemo(
-        () => ({ index: searchIndex, terms: [], centre }),
-        [searchIndex, centre],
+        () => ({ index: searchIndex, terms: [], centre, prior }),
+        [searchIndex, centre, prior],
     );
 
     /**

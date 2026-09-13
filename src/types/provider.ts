@@ -1,5 +1,6 @@
 export type Country = 'MX' | 'US';
 export type ProviderSource = 'google' | 'manual' | 'doctoralia';
+export type ProviderTier = 'basic' | 'promoted' | 'featured';
 
 export type Specialty =
   | 'dentist'
@@ -64,7 +65,26 @@ export interface Provider {
   email?: string;
   languages: string[];
   promoted: boolean;
+  /**
+   * Paid placement. Derived from `tier`, never set on its own — the gold
+   * Verified badge is what a listing buys, so anything that can turn it on
+   * without a plan behind it devalues every badge on the site.
+   */
   verified: boolean;
+  /** What the clinic is paying for. 'basic' is everyone who has not. */
+  tier: ProviderTier;
+  /**
+   * A professional licence (cedula profesional) was published on the source
+   * profile. A credential we checked, not a plan we sold — this is what
+   * `verified` used to mean, for 1,720 rows, which is why it meant nothing.
+   */
+  licensed: boolean;
+  /**
+   * Manual curation. Null for almost everyone; low numbers surface first, above
+   * the promoted tier, on the default browse. Exists so the team can put
+   * clinics with real photography on row one without a deploy.
+   */
+  featuredRank?: number;
   source: ProviderSource;
   clicks: number;
   googlePlaceId?: string;

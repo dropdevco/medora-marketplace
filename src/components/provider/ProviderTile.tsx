@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { Provider } from '../../types/provider';
+import { ratingOf } from '../../utils/rating';
 import { portraitUrl, hueOf } from '../../utils/images';
 import { IconStar, IconVerified, IconClipboard, SpecialtyIcon } from '../icons/Icons';
 
@@ -18,6 +19,7 @@ interface ProviderTileProps {
  * designed cover rather than as a missing image.
  */
 export function ProviderTile({ provider, onClick }: ProviderTileProps) {
+    const rating = ratingOf(provider);
     const { t } = useTranslation();
     const photo = portraitUrl(provider.imageUrl);
     const accent = provider.country === 'MX' ? 'var(--mx)' : 'var(--us)';
@@ -75,13 +77,18 @@ export function ProviderTile({ provider, onClick }: ProviderTileProps) {
                     </span>
                 )}
 
-                {provider.verified && !provider.promoted && (
+                {/* A tile has room for one corner mark. The plan outranks the
+                    licence: Verified is what a listing buys, and showing the
+                    credential in the same slot is what made the two look like
+                    the same thing. */}
+                {(provider.verified || provider.licensed) && !provider.promoted && (
                     <span
-                        title={t('filters.verified')}
+                        title={provider.verified ? t('drawer.verified') : t('drawer.licensed')}
                         style={{
                             position: 'absolute', top: 10, left: 10,
                             width: 26, height: 26, borderRadius: '50%',
-                            background: 'var(--navy-800)', color: 'var(--green)',
+                            background: 'var(--navy-800)',
+                            color: provider.verified ? 'var(--gold)' : 'var(--gray-400)',
                             border: '1px solid var(--border)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
@@ -101,13 +108,24 @@ export function ProviderTile({ provider, onClick }: ProviderTileProps) {
                     }}>
                         {provider.name}
                     </p>
-                    <span style={{
-                        display: 'flex', alignItems: 'center', gap: '0.22rem',
-                        fontSize: '0.82rem', flexShrink: 0,
-                    }}>
-                        <IconStar size={13} filled style={{ color: 'var(--star)' }} />
-                        <strong style={{ fontWeight: 700 }}>{provider.rating.toFixed(1)}</strong>
-                    </span>
+                    {/* A tile is narrow enough that "New" is the whole badge,
+                        but printing 0.0 here was the same lie as on the card. */}
+                    {rating !== null ? (
+                        <span style={{
+                            display: 'flex', alignItems: 'center', gap: '0.22rem',
+                            fontSize: '0.82rem', flexShrink: 0,
+                        }}>
+                            <IconStar size={13} filled style={{ color: 'var(--star)' }} />
+                            <strong style={{ fontWeight: 700 }}>{rating.toFixed(1)}</strong>
+                        </span>
+                    ) : (
+                        <span style={{
+                            fontSize: '0.74rem', flexShrink: 0, fontWeight: 700,
+                            color: 'var(--gray-500)',
+                        }}>
+                            {t('card.new')}
+                        </span>
+                    )}
                 </div>
 
                 <p style={{
