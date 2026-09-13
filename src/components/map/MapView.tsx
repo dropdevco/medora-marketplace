@@ -1,8 +1,9 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
-import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
+import { importLibrary } from '@googlemaps/js-api-loader';
 import { useTranslation } from 'react-i18next';
 import type { MapBox, Provider } from '../../types/provider';
 import { IconLocate, IconMapPin, specialtyColor } from '../icons/Icons';
+import { MAPS_API_KEY as API_KEY } from '../../lib/googleMaps';
 
 /** Fallback view if we have no providers at all to derive bounds from. */
 const BORDER_CENTER = { lat: 31.738, lng: -106.455 };
@@ -43,18 +44,6 @@ const AREA_CHANGE_THRESHOLD = 0.15;
  */
 const CAMERA_DEBOUNCE_MS = 250;
 
-/**
- * The Google Maps JavaScript API key is intentionally public — it MUST be
- * sent to the browser for the Maps SDK to authenticate itself.
- * Protect it by adding HTTP referrer restrictions in Google Cloud Console:
- *   → APIs & Services → Credentials → [your key] → Application restrictions
- *   → Set to "HTTP referrers" and add your domain(s).
- */
-const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
-
-if (API_KEY) {
-    setOptions({ key: API_KEY, v: 'weekly' });
-}
 
 interface MapViewProps {
     providers: Provider[];

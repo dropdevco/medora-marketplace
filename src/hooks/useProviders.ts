@@ -9,6 +9,7 @@ import { DEFAULT_RADIUS_KM } from '../utils/geo';
 import { buildSearchIndex, tokenize } from '../utils/search';
 import { buildVocabulary, buildFacets } from '../utils/facets';
 import { applyFilters, defaultFilters, type FilterContext } from '../utils/filters';
+import { resolvePostal, type PostalHit } from '../utils/postalGeocode';
 
 const SPECIALTY_KEYS = new Set(Object.keys(SpecialtyLabels));
 const SORT_MODES = new Set<SortMode>(['relevance', 'rating', 'reviews', 'distance', 'price']);
@@ -273,11 +274,65 @@ export function useProviders() {
         return centroids;
     }, [allProviders]);
 
-    /** Null when no code is active, and also when the code matches nothing we hold. */
-    const centre = useMemo(
+    /**
+     * A code we hold resolves instantly from our own rows; anything else goes
+     * to the geocoder.
+     *
+     * Keeping the derived centroid in front is not just a cost saving — for a
+     * code we have providers in, the average of those providers is a better
+     * centre for a radius search than the postal district's geometric middle.
+     * The geocoder exists for the other 99.9% of codes on both sides of the
+     * border, which is every code a patient is likely to type.
+     */
+    const [remote, setRemote] = useState<{
+        code: string;
+        state: 'resolving' | 'resolved';
+        hits: PostalHit[];
+    } | null>(null);
+
+    const localCentre = useMemo(
         () => (filters.postalCode ? postalCentroids.get(filters.postalCode) ?? null : null),
         [filters.postalCode, postalCentroids],
     );
+
+    useEffect(() => {
+        const code = filters.postalCode;
+        if (!code || localCentre) {
+            setRemote(null);
+            return;
+        }
+
+        let live = true;
+        setRemote({ code, state: 'resolving', hits: [] });
+        resolvePostal(code, filters.country).then((hits) => {
+            if (live) setRemote({ code, state: 'resolved', hits });
+        });
+        return () => { live = false; };
+    }, [filters.postalCode, filters.country, localCentre]);
+
+    /**
+     * The code means two places and the user has not said which side they are
+     * on. Offered as a choice rather than guessed — picking the wrong country
+     * silently returns an empty page for a code that plainly exists.
+     */
+    const postalChoices = useMemo(
+        () => (remote?.state === 'resolved' && remote.hits.length > 1 ? remote.hits : []),
+        [remote],
+    );
+
+    /** True while a code is in flight, so the UI can say so instead of "0 results". */
+    const postalPending = remote?.state === 'resolving';
+
+    /** Null when no code is active, and also when the code resolves nowhere. */
+    const centre = useMemo(() => {
+        if (!filters.postalCode) return null;
+        if (localCentre) return localCentre;
+        if (remote?.state !== 'resolved' || remote.code !== filters.postalCode) return null;
+        // With two candidates and no stated side, filtering to either one would
+        // be a guess. Hold the results until the user picks.
+        if (remote.hits.length !== 1) return null;
+        return { lat: remote.hits[0].lat, lng: remote.hits[0].lng };
+    }, [filters.postalCode, localCentre, remote]);
 
     const ctx: FilterContext = useMemo(
         () => ({ index: searchIndex, terms: tokenize(filters.search), centre }),
@@ -334,6 +389,10 @@ export function useProviders() {
         loading,
         /** Lets the UI tell "no providers near 32300" apart from "no such code". */
         knownPostalCodes: postalCentroids,
+        /** True while a typed code is being geocoded. */
+        postalPending,
+        /** Two countries claim this code; the user has to say which. */
+        postalChoices,
         /** Distance from the searched postal centre, for the result cards. */
         centre,
     };

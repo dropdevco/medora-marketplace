@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { ProviderFilters, Specialty, Country } from '../../types/provider';
 import { suggest, type Suggestion, type SuggestVocabulary } from '../../utils/facets';
 import { fold } from '../../utils/search';
-import { isPostalQuery } from '../../utils/geo';
+import { isPostalQuery, normalizePostal } from '../../utils/geo';
 import {
     IconSearch, IconClose, IconMapPin, IconStar, IconShield,
     IconCheck, SpecialtyIcon,
@@ -107,7 +107,7 @@ export function SearchHero({
             search: asPostal ? '' : d.text.trim(),
             specialty: d.specialty,
             country: d.country,
-            postalCode: asPostal ? d.text.trim() : d.postalCode,
+            postalCode: asPostal ? normalizePostal(d.text) : d.postalCode,
             insurances: d.insurances,
         });
     };
@@ -352,17 +352,20 @@ function WherePopover({ draft, onPick }: {
             <div className="ms-pop-sep" />
 
             <form
-                onSubmit={(e) => { e.preventDefault(); if (isPostalQuery(zip)) onPick({ postalCode: zip.trim() }); }}
+                onSubmit={(e) => { e.preventDefault(); if (isPostalQuery(zip)) onPick({ postalCode: normalizePostal(zip) }); }}
                 className="ms-pop-zip"
             >
                 <label htmlFor="ms-hero-zip">{t('search.zipLabel')}</label>
                 <input
                     id="ms-hero-zip"
                     inputMode="numeric"
-                    maxLength={5}
+                    maxLength={10}
                     placeholder="32000"
                     value={zip}
-                    onChange={(e) => setZip(e.target.value.replace(/\D/g, ''))}
+                    // The hyphen survives so a pasted ZIP+4 can be recognised
+                    // and truncated, rather than silently becoming nine digits
+                    // that match nothing.
+                    onChange={(e) => setZip(e.target.value.replace(/[^\d-]/g, ''))}
                 />
                 <button type="submit" disabled={!isPostalQuery(zip)}>
                     {t('search.zipApply')}

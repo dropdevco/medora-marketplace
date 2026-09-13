@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { ProviderFilters, SortMode, Specialty } from '../../types/provider';
 import { IconClose, IconMapPin } from '../icons/Icons';
 import { RADIUS_OPTIONS } from '../../utils/geo';
+import type { PostalHit } from '../../utils/postalGeocode';
 
 const SORTS: SortMode[] = ['relevance', 'rating', 'reviews', 'distance', 'price'];
 
@@ -13,7 +14,15 @@ interface FilterSummaryProps {
     count: number;
     activeCount: number;
     /** False when the searched code matches no provider we hold. */
-    postalKnown: boolean;
+    /**
+     * What happened to the typed code. 'pending' exists so a geocode in flight
+     * reads as "locating" rather than as "no such code", which is what a bare
+     * boolean forced it to say for the ~200ms it takes to answer.
+     */
+    postalStatus: 'ok' | 'pending' | 'unknown' | 'ambiguous';
+    /** The places an ambiguous code could mean. Empty unless status is 'ambiguous'. */
+    postalChoices: PostalHit[];
+    onChoosePostal: (hit: PostalHit) => void;
 }
 
 /**
@@ -28,7 +37,9 @@ interface FilterSummaryProps {
  */
 export function FilterSummary({
     filters, updateFilter, patchFilters, resetFilters, count, activeCount,
-    postalKnown,
+    postalStatus,
+    postalChoices,
+    onChoosePostal,
 }: FilterSummaryProps) {
     const { t } = useTranslation();
 
@@ -97,7 +108,9 @@ export function FilterSummary({
                     {filters.postalCode && (
                         <PostalChip
                             code={filters.postalCode}
-                            known={postalKnown}
+                            status={postalStatus}
+                            choices={postalChoices}
+                            onChoose={onChoosePostal}
                             radiusKm={filters.radiusKm}
                             onRadius={(km) => updateFilter('radiusKm', km)}
                             onClear={() => patchFilters({ postalCode: '', radiusKm: filters.radiusKm })}
@@ -251,11 +264,24 @@ function MapAreaChip({ onClear }: { onClear: () => void }) {
 }
 
 /** The location chip doubles as the radius control while a code is active. */
-function PostalChip({ code, known, radiusKm, onRadius, onClear }: {
-    code: string; known: boolean; radiusKm: number;
-    onRadius: (km: number) => void; onClear: () => void;
+/**
+ * The postal chip doubles as the radius selector, the "still looking" state,
+ * and — when a five-digit code means a place on each side of the border — the
+ * question about which one was meant. All four are the same chip because they
+ * are all the same fact: what "near 79912" currently resolves to.
+ */
+function PostalChip({ code, status, choices, onChoose, radiusKm, onRadius, onClear }: {
+    code: string;
+    status: 'ok' | 'pending' | 'unknown' | 'ambiguous';
+    choices: PostalHit[];
+    onChoose: (hit: PostalHit) => void;
+    radiusKm: number;
+    onRadius: (km: number) => void;
+    onClear: () => void;
 }) {
     const { t } = useTranslation();
+    const ok = status === 'ok';
+    const unresolved = status === 'unknown';
     return (
         <span
             style={{
@@ -263,14 +289,35 @@ function PostalChip({ code, known, radiusKm, onRadius, onClear }: {
                 padding: '0.24rem 0.4rem 0.24rem 0.7rem',
                 borderRadius: 'var(--radius-pill)',
                 fontSize: '0.79rem', fontWeight: 600,
-                background: known ? 'var(--navy-800)' : 'transparent',
-                color: known ? 'var(--gray-200)' : 'var(--gold)',
-                border: `1px solid ${known ? 'var(--border)' : 'var(--gold)'}`,
+                background: unresolved ? 'transparent' : 'var(--navy-800)',
+                color: unresolved ? 'var(--gold)' : 'var(--gray-200)',
+                border: `1px solid ${unresolved ? 'var(--gold)' : 'var(--border)'}`,
             }}
         >
-            {known ? t('filters.nearPostal', { code }) : t('filters.postalNoMatch', { code })}
+            {status === 'pending' && t('filters.postalLocating', { code })}
+            {status === 'unknown' && t('filters.postalNoMatch', { code })}
+            {status === 'ambiguous' && t('filters.postalWhichSide', { code })}
+            {ok && t('filters.nearPostal', { code })}
 
-            {known && (
+            {status === 'ambiguous' && choices.map((hit) => (
+                <button
+                    key={hit.country}
+                    onClick={() => onChoose(hit)}
+                    className="press"
+                    style={{
+                        borderRadius: 'var(--radius-pill)',
+                        border: '1px solid var(--border-strong)',
+                        background: 'var(--surface)',
+                        color: 'var(--white)',
+                        fontSize: '0.74rem', fontWeight: 700,
+                        padding: '0.12rem 0.5rem',
+                    }}
+                >
+                    {hit.label}
+                </button>
+            ))}
+
+            {ok && (
                 <select
                     aria-label={t('filters.radiusLabel')}
                     value={radiusKm}

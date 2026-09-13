@@ -52,6 +52,8 @@
     "filtersLabel": "Filtros",
     "nearPostal": "Cerca de {{code}}",
     "postalNoMatch": "Sin proveedores en {{code}}",
+    "postalLocating": "Ubicando {{code}}…",
+    "postalWhichSide": "{{code}} — ¿qué lado?",
     "radiusKm": "{{km}} km",
     "radiusLabel": "Radio de búsqueda",
     "clearPostal": "Quitar filtro de ubicación",

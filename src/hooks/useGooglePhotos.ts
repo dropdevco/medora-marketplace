@@ -1,5 +1,9 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { importLibrary } from '@googlemaps/js-api-loader';
+// Side-effect import: configures the loader with our key. This worked
+// without it only because the map chunk happened to load first; nothing
+// guarantees that once these hooks are used outside the search page.
+import '../lib/googleMaps';
 
 export interface GooglePhoto {
     /** Ready-to-render URL, sized for our gallery. */

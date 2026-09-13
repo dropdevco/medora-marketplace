@@ -15,6 +15,7 @@ import { IconSearch, IconMapPin, IconList } from '../components/icons/Icons';
 import { trackProviderClick } from '../utils/analytics';
 import { distanceKm } from '../utils/geo';
 import { countActiveFilters } from '../utils/filters';
+import type { PostalHit } from '../utils/postalGeocode';
 import { buildDiscoverRows } from '../utils/discover';
 import type { MapBox, Provider, ProviderFilters, Specialty } from '../types/provider';
 
@@ -72,7 +73,7 @@ export function SearchPage() {
     const {
         providers, allProviders, filters, updateFilter, patchFilters, resetFilters,
         facets, vocabulary, selectedProvider, setSelectedProvider, loading,
-        knownPostalCodes, centre,
+        knownPostalCodes, centre, postalPending, postalChoices,
     } = useProviders();
 
     const activeCount = countActiveFilters(filters);
@@ -140,7 +141,23 @@ export function SearchPage() {
         return () => mq.removeEventListener('change', sync);
     }, []);
 
-    const postalKnown = !filters.postalCode || knownPostalCodes.has(filters.postalCode);
+    /**
+     * Four states, not two. A code we hold is instant; anything else is a
+     * geocode, which can still be in flight ('pending'), can come back with a
+     * place on each side of the border ('ambiguous'), or can come back with
+     * nothing ('unknown'). Collapsing the first three into "unknown" is what
+     * made a valid El Paso ZIP read as a typo.
+     */
+    const postalStatus: 'ok' | 'pending' | 'unknown' | 'ambiguous' =
+        !filters.postalCode || knownPostalCodes.has(filters.postalCode) ? 'ok'
+            : postalPending ? 'pending'
+                : postalChoices.length > 1 ? 'ambiguous'
+                    : centre ? 'ok' : 'unknown';
+
+    /** Picking a side both resolves the code and records where they are searching from. */
+    const choosePostal = useCallback((hit: PostalHit) => {
+        patchFilters({ country: hit.country });
+    }, [patchFilters]);
 
     /** Specialties in directory order — the rail should lead with what we have. */
     const specialtyOrder = useMemo(
@@ -366,7 +383,9 @@ export function SearchPage() {
                                 resetFilters={resetFilters}
                                 count={providers.length}
                                 activeCount={activeCount}
-                                postalKnown={postalKnown}
+                                postalStatus={postalStatus}
+                                postalChoices={postalChoices}
+                                onChoosePostal={choosePostal}
                             />
 
                             {loading ? (

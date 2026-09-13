@@ -52,6 +52,8 @@
     "filtersLabel": "Filters",
     "nearPostal": "Near {{code}}",
     "postalNoMatch": "No providers in {{code}}",
+    "postalLocating": "Locating {{code}}…",
+    "postalWhichSide": "{{code}} — which side?",
     "radiusKm": "{{km}} km",
     "radiusLabel": "Search radius",
     "clearPostal": "Clear location filter",
