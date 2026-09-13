@@ -8,8 +8,42 @@ Provider data comes from **two independent ingestion paths** that both write int
 
 ## 2. Status
 
-- **Active.** Last commit: `2026-09-05 21:47:14 -0600` by Carlos Gonzalez — "feat: redesign directory as search-first, add postal/services data pipeline" (`acc6da7`, current branch: `main`).
-- Working tree is clean as of this writing — the search-first redesign and the postal/services backfill scripts described below are committed, not in progress.
+- **Active.** Branch `feat/post-meeting-overhaul`, six commits on top of `30a78ff`,
+  acting on the Med Society UI review. Not yet merged to `main`.
+- Two migrations have been **applied to the live project** (`gbfbsecjgjmqoznebwwb`)
+  and are checked in under `supabase/migrations/`:
+  - `0002_provider_tiers.sql` — splits `verified` (paid) from `licensed` (cédula),
+    adds `tier` and `featuredRank`, nulls eight junk `00000` postal codes.
+  - `0003_clinic_accounts.sql` — `provider_owners`, `provider_claims`,
+    `provider_photos`, the `clinic-photos` storage bucket, and the column-grant
+    edit whitelist on `providers`.
+- A demo clinic account exists for testing the portal:
+  `demo-clinic@medsociety.one` / `medsociety-demo-2026`, owner of
+  "Dr. Jose Luis Hernández Batista". Recreate with
+  `npx tsx scripts/seed-demo-clinic.ts`.
+
+### 2.1 What the review changed
+
+| Feedback | Where it landed |
+|---|---|
+| Map needs colour, Airbnb-style | `MapView.tsx` `lightMapStyles` / `darkMapStyles`; pins tinted by specialty via `utils/specialtyColors.ts` |
+| Cluster circles disliked, too many pins | Supercluster removed; viewport cull + 80-pin cap |
+| List should follow the visible map area | "Search as I move the map" toggle, on by default, persisted |
+| Scrollable specialty row needs an arrow | `components/search/ScrollRail.tsx` |
+| Remove the border tagline | `discover.heroTitle` replaced; `index.html` title and meta |
+| Good photos hardcoded to the top | `providers.featuredRank`, seeded for 36 rows |
+| Verified reserved for paid tier | `verified` follows `tier`; cédula moved to `licensed` |
+| Providers page → nav CTA | `/sales` → `/pricing`, filled CTA in `Navbar` |
+| Search bar fires on click | `SearchHero.pick()` stages, `submit()` commits |
+| Postal search returns nothing | `utils/postalGeocode.ts`, country-aware |
+| Everything shows 5 stars | `utils/rating.ts`: unrated is not 0, sort is confidence-weighted |
+| Photos missing / no full view | card `onError` fallback, drawer portrait, `PhotoLightbox.tsx` |
+| Fake profile views as a hook | `utils/estimatedViews.ts` — **clinic dashboard only, never public** |
+| What can a clinic do once claimed | `/login`, `/claim/:id`, `/dashboard` |
+| Anything worth taking from pricing.medsociety.one | Three tiers + five add-ons, on `/pricing`, bilingual |
+
+Appointment booking was explicitly out of scope (David's call), and there is
+still no payment flow — upgrading opens the inquiry form.
 
 ## 3. Stack
 
@@ -178,6 +212,27 @@ InquiryModal  →  src/lib/leads.ts  →  Supabase public.leads  →  Database W
 This pipeline is unaffected by the search-first redesign — no changes here since it was last documented.
 
 ## 10. Known Issues & TODOs
+
+**Added by the post-review work:**
+- `npm run lint` reports 34 errors. 31 predate this branch; the 3 added are all
+  `react-hooks/set-state-in-effect` in data hooks (`useSession`, `useMyClinic`,
+  `ClinicPhotoManager`), the same shape as the pre-existing violations in
+  `useGoogleReviews` / `useGooglePhotos`. Fixing the class properly means a
+  data-fetching library, not a local edit.
+- Claim approval is manual SQL. There is no admin UI:
+  `insert into provider_owners (provider_id, user_id) values (...)` after
+  reading `provider_claims where status = 'pending'`.
+- `estimateViews()` is modelled, not measured. Replace it with real `clicks`
+  once `analytics.ts` persists them, and delete the module.
+- The directory holds duplicate rows (e.g. "International X Dental Clinic"
+  appears twice with identical review counts). Dedupe was out of scope here.
+- `doctoralia_doctors.google_rating` is empty for all 2,794 rows — enrichment
+  never ran. Running it would give real decimal ratings for Doctoralia
+  providers at the cost of ~2,700 Places Details calls.
+- The clinic dashboard cannot edit specialty, hours or insurances yet; the
+  columns are granted, the form does not surface them.
+
+
 
 - `src/utils/analytics.ts` contains an explicit `// TODO: swap with Supabase increment when live` — click tracking is a stub only, not persisted.
 - `src/components/search/SearchBar.tsx` is superseded by `SearchHero.tsx` and is currently unreferenced by anything — a candidate for deletion, left in place only because it wasn't the redesign's job to remove other people's uncommitted work.
