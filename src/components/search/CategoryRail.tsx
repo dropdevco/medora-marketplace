@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { Specialty } from '../../types/provider';
 import { SpecialtyIcon, specialtyColor } from '../icons/Icons';
+import { ScrollRail } from './ScrollRail';
 
 interface CategoryRailProps {
     /** Specialties in directory order, largest first. */
@@ -21,7 +22,7 @@ export function CategoryRail({ order, active, onToggle }: CategoryRailProps) {
     const { t } = useTranslation();
 
     return (
-        <div className="ms-cats" role="tablist" aria-label={t('filters.specialtyGroup')}>
+        <ScrollRail className="ms-cats" role="tablist" label={t('filters.specialtyGroup')}>
             {order.map((s) => {
                 const on = active.includes(s);
                 return (
@@ -45,6 +46,6 @@ export function CategoryRail({ order, active, onToggle }: CategoryRailProps) {
                     </button>
                 );
             })}
-        </div>
+        </ScrollRail>
     );
 }

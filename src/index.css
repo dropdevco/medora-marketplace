@@ -1263,3 +1263,65 @@ select option {
   );
   color: hsl(var(--mono-h) 55% var(--mono-fg));
 }
+
+/* ─── Scroll rails ───────────────────────────────────── */
+/* A horizontally scrolling row plus the two cues it cannot give itself: a
+   chevron on whichever side has somewhere to go, and a fade over the clipped
+   edge. Both are driven by ScrollRail and only exist while the row overflows. */
+.ms-rail {
+  position: relative;
+  min-width: 0;
+}
+
+.ms-rail-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--navy-800);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  cursor: pointer;
+  transition: background 0.18s var(--ease-out), transform 0.18s var(--ease-out);
+}
+.ms-rail-arrow:hover { background: var(--surface-hover); }
+.ms-rail-arrow.is-left { left: -6px; }
+.ms-rail-arrow.is-right { right: -6px; }
+
+/* The fade sits on the rail, not on the scroller, so it does not travel with
+   the content. Pointer events off — it covers live chips. */
+.ms-rail::before,
+.ms-rail::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 46px;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.18s var(--ease-out);
+}
+.ms-rail::before {
+  left: 0;
+  background: linear-gradient(to right, var(--navy), transparent);
+}
+.ms-rail::after {
+  right: 0;
+  background: linear-gradient(to left, var(--navy), transparent);
+}
+.ms-rail:has(.ms-rail-arrow.is-left)::before { opacity: 1; }
+.ms-rail:has(.ms-rail-arrow.is-right)::after { opacity: 1; }
+
+/* Touch scrolls with a finger and has no cursor to put an arrow under, so the
+   chevrons only earn their space on a pointer device. The fades stay. */
+@media (hover: none) {
+  .ms-rail-arrow { display: none; }
+}

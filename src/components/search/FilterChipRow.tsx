@@ -5,6 +5,7 @@ import {
     IconSliders, IconStar, IconClipboard, IconVerified,
     IconMX, IconUS, SpecialtyIcon,
 } from '../icons/Icons';
+import { ScrollRail } from './ScrollRail';
 
 interface FilterChipRowProps {
     filters: ProviderFilters;
@@ -44,7 +45,7 @@ export function FilterChipRow({
         .map(([s]) => s as Specialty);
 
     return (
-        <div className="ms-chiprow">
+        <ScrollRail className="ms-chiprow">
             <button
                 onClick={onOpenFilters}
                 className={`ms-chip ms-chip-filters${activeCount > 0 ? ' is-active' : ''}`}
@@ -115,7 +116,7 @@ export function FilterChipRow({
                     onClick={() => updateFilter('specialty', [...filters.specialty, s])}
                 />
             ))}
-        </div>
+        </ScrollRail>
     );
 }
 

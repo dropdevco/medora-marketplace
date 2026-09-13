@@ -116,28 +116,44 @@ export function SearchHero({
      * A suggestion is a filter, not more text. Picking "Dentist" should narrow
      * the directory; leaving the word in the box would additionally demand that
      * clinics spell it out, and quietly drop the ones that don't.
+     *
+     * Picking *stages* the filter — it does not run the search. Committing on
+     * click meant a query could only ever be one thing wide: tapping "Dentist"
+     * reloaded the results before the user could add "Juárez" or their
+     * insurer, and the box they were still typing in was already stale. The
+     * search runs from the search button or Enter, and nowhere else.
+     *
+     * The exception is a provider, which is a destination rather than a filter
+     * — there is nothing left to add to it.
      */
     const pick = (s: Suggestion) => {
         setActive(-1);
         switch (s.kind) {
             case 'specialty':
-                submit({ text: '', specialty: [...new Set([...draft.specialty, s.value as Specialty])] });
+                patch({ text: '', specialty: [...new Set([...draft.specialty, s.value as Specialty])] });
+                inputRef.current?.focus();
                 break;
             case 'city':
-                submit({ text: '', country: s.value as Country });
+                patch({ text: '', country: s.value as Country });
+                inputRef.current?.focus();
                 break;
             case 'postal':
-                submit({ text: '', postalCode: s.value });
+                patch({ text: '', postalCode: s.value });
+                inputRef.current?.focus();
                 break;
             case 'insurance':
-                submit({ text: '', insurances: [...new Set([...draft.insurances, s.value])] });
+                patch({ text: '', insurances: [...new Set([...draft.insurances, s.value])] });
+                inputRef.current?.focus();
                 break;
             case 'provider':
                 setOpen(null);
                 onProvider(s.value);
                 break;
             case 'service':
-                submit({ text: s.label });
+                // A service is free text — there is no filter axis for it, so
+                // it has to land in the box and be searched as words.
+                patch({ text: s.label });
+                setOpen(null);
                 break;
         }
     };
