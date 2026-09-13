@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { ProviderFilters, SortMode, Specialty } from '../../types/provider';
-import { IconClose } from '../icons/Icons';
+import { IconClose, IconMapPin } from '../icons/Icons';
 import { RADIUS_OPTIONS } from '../../utils/geo';
 
 const SORTS: SortMode[] = ['relevance', 'rating', 'reviews', 'distance', 'price'];
@@ -87,7 +87,12 @@ export function FilterSummary({
                 </div>
             </div>
 
-            {(activeCount > 0) && (
+            {/* `mapArea` is intentionally outside countActiveFilters (see the
+                note there), so it has to be admitted here explicitly. Without
+                this clause a map-only filter would narrow the list with no
+                chip to explain it — exactly the invisible-filter failure this
+                row exists to prevent. */}
+            {(activeCount > 0 || filters.mapArea) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                     {filters.postalCode && (
                         <PostalChip
@@ -97,6 +102,10 @@ export function FilterSummary({
                             onRadius={(km) => updateFilter('radiusKm', km)}
                             onClear={() => patchFilters({ postalCode: '', radiusKm: filters.radiusKm })}
                         />
+                    )}
+
+                    {filters.mapArea && (
+                        <MapAreaChip onClear={() => patchFilters({ mapArea: null })} />
                     )}
 
                     {filters.country && (
@@ -199,6 +208,41 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
                 aria-label={`Remove ${label}`}
                 title={`Remove ${label}`}
                 style={{ display: 'flex', background: 'none', color: 'inherit', padding: '0.1rem', flexShrink: 0 }}
+            >
+                <IconClose size={13} weight={2.2} />
+            </button>
+        </span>
+    );
+}
+
+/**
+ * The other spatial chip: the results are clipped to whatever the map was
+ * showing when "Search this area" was pressed.
+ *
+ * It carries no adjustable control — a box is only editable by moving the map —
+ * so it is a location statement plus a clear button, and the pin marks it as
+ * spatial rather than categorical.
+ */
+function MapAreaChip({ onClear }: { onClear: () => void }) {
+    const { t } = useTranslation();
+    return (
+        <span
+            style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                padding: '0.24rem 0.4rem 0.24rem 0.6rem',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '0.79rem', fontWeight: 600,
+                background: 'var(--surface)', color: 'var(--white)',
+                border: '1px solid var(--border-strong)',
+            }}
+        >
+            <IconMapPin size={13} weight={2.2} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+            {t('filters.mapArea')}
+            <button
+                onClick={onClear}
+                aria-label={t('filters.clearMapArea')}
+                title={t('filters.clearMapArea')}
+                style={{ display: 'flex', background: 'none', color: 'inherit', padding: '0.1rem' }}
             >
                 <IconClose size={13} weight={2.2} />
             </button>

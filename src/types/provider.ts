@@ -84,6 +84,20 @@ export interface Provider {
 
 export type SortMode = 'relevance' | 'rating' | 'reviews' | 'distance' | 'price';
 
+/**
+ * A geographic bounding box, in degrees.
+ *
+ * Shared between the map (which produces one from its camera) and the filter
+ * layer (which consumes one as a spatial predicate), so both sides agree on
+ * the shape rather than each declaring its own.
+ */
+export interface MapBox {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
 export interface ProviderFilters {
   search: string;
   /** Multi-select: a provider matches if it holds *any* of these. */
@@ -115,4 +129,10 @@ export interface ProviderFilters {
   postalCode: string;
   /** Radius around `postalCode`, in kilometres. Ignored when postalCode is ''. */
   radiusKm: number;
+  /**
+   * The map viewport the user explicitly searched, via "Search this area".
+   * Null when the map is not filtering — which is the default, because the
+   * map must never narrow the results just by being panned.
+   */
+  mapArea: MapBox | null;
 }

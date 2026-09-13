@@ -55,6 +55,8 @@
     "radiusKm": "{{km}} km",
     "radiusLabel": "Search radius",
     "clearPostal": "Clear location filter",
+    "mapArea": "Map area",
+    "clearMapArea": "Clear map area filter",
     "specialtyGroup": "Specialty",
     "insuranceGroup": "Insurance accepted",
     "insuranceSearch": "Find an insurer",
@@ -92,7 +94,10 @@
     "previewMode": "Map preview mode",
     "previewHint": "Add VITE_GOOGLE_MAPS_API_KEY to .env.local to load the live map.",
     "listShort": "List",
-    "mapShort": "Map"
+    "mapShort": "Map",
+    "searchThisArea": "Search this area",
+    "showingCapped": "Showing the top {{shown}} of {{total}} here. Zoom in to see them all.",
+    "showingInView": "Showing {{shown}} of {{total}} on the map. Zoom out to see the rest."
   },
   "drawer": {
     "rating": "Rating",
@@ -194,6 +199,8 @@
     "formCity": "City",
     "formSelect": "Select one",
     "formOther": "Somewhere else",
+    "formCityOtherLabel": "Which city?",
+    "formCityOtherPlaceholder": "City, state or province",
     "formMessage": "Anything else?",
     "formMessagePlaceholder": "Opening hours, languages spoken, insurance accepted",
     "formSubmit": "Send request",

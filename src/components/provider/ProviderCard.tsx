@@ -17,12 +17,19 @@ interface ProviderCardProps {
      * leave. The page forwards it to the map, which lights the matching pin.
      */
     onHover?: (id: string | null) => void;
+    /**
+     * The cursor is over this provider's *map pin*. The mirror image of
+     * `onHover`: that sends the list's attention to the map, this brings the
+     * map's attention back. Without the return leg, pointing at a pin tells
+     * you nothing about which of 807 rows it belongs to.
+     */
+    focused?: boolean;
 }
 
 /** Insurers are long names; two is what fits before the row starts lying about the rest. */
 const INSURANCE_CHIPS = 2;
 
-export function ProviderCard({ provider, selected, onClick, distance, onHover }: ProviderCardProps) {
+export function ProviderCard({ provider, selected, onClick, distance, onHover, focused = false }: ProviderCardProps) {
     const { t } = useTranslation();
     const photo = portraitUrl(provider.imageUrl);
 
@@ -42,8 +49,11 @@ export function ProviderCard({ provider, selected, onClick, distance, onHover }:
                 textAlign: 'left',
                 padding: '0.9rem 1rem',
                 borderRadius: 'var(--radius)',
-                background: selected ? 'var(--gold-dim)' : 'var(--navy-800)',
-                border: `1px solid ${selected ? 'var(--gold)' : 'var(--border)'}`,
+                background: selected ? 'var(--accent-dim)' : 'var(--navy-800)',
+                // Focus is the lighter of the two states: a pin hover is a
+                // glance, a selection is a decision, so it borrows the accent
+                // edge without the fill.
+                border: `1px solid ${selected || focused ? 'var(--accent)' : 'var(--border)'}`,
                 color: 'var(--white)',
                 transition: 'background var(--transition), border-color var(--transition), box-shadow var(--transition)',
                 cursor: 'pointer',

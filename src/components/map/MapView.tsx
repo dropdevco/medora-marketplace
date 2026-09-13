@@ -1,8 +1,7 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
-import Supercluster from 'supercluster';
 import { useTranslation } from 'react-i18next';
-import type { Provider } from '../../types/provider';
+import type { MapBox, Provider } from '../../types/provider';
 import { IconLocate, IconMapPin } from '../icons/Icons';
 
 /** Fallback view if we have no providers at all to derive bounds from. */
@@ -19,38 +18,19 @@ const PAN_MARGIN = 0.12;
 const FIT_PADDING = 72;
 
 /**
- * Cluster bubbles, sized and shaded by how many clinics they stand for.
- * Rendering ~4,000 individual pins is what made the map slow to load and to
- * pan; the clusterer keeps only the visible aggregates on screen and splits
- * them apart as you zoom in.
+ * How many pins may be on screen at once. Rendering ~4,000 individual pins is
+ * what made the map slow to load and to pan, so the viewport plus this cap is
+ * what keeps the marker count in the low hundreds instead.
  */
-/** Supercluster feature properties, narrowed for the fields we read. */
-interface ClusterProps {
-    cluster?: boolean;
-    cluster_id?: number;
-    point_count?: number;
-}
-
-/** What a rendered marker currently stands for. Recycled markers read this. */
-type Cell =
-    | { kind: 'cluster'; position: google.maps.LatLngLiteral; expansionZoom: number }
-    | { kind: 'provider'; providerId: string };
+const DEFAULT_MAX_PINS = 150;
 
 /**
- * Cluster bubble styling. Sized and shaded by how many clinics the bubble
- * stands for, relative to the biggest cluster currently on the map.
+ * How far the camera must move before "Search this area" is worth offering,
+ * as a share of the current viewport span. Below this the user has nudged the
+ * map rather than gone looking somewhere else, and a button that reappears on
+ * every twitch is noise.
  */
-function clusterIcon(count: number, largest: number): google.maps.Symbol {
-    const share = count / Math.max(largest, 1);
-    return {
-        path: google.maps.SymbolPath.CIRCLE,
-        fillColor: share > 0.6 ? '#0a4c3a' : share > 0.3 ? '#0f6b52' : '#2f8a70',
-        fillOpacity: 0.92,
-        strokeColor: '#ffffff',
-        strokeWeight: 2.5,
-        scale: 18 + Math.round(share * 14),
-    };
-}
+const AREA_CHANGE_THRESHOLD = 0.15;
 
 /**
  * The Google Maps JavaScript API key is intentionally public — it MUST be
@@ -77,12 +57,28 @@ interface MapViewProps {
      * list and the map are just two lists, and the map is the useless one.
      */
     hoveredId?: string | null;
+    /** The pin the cursor is over, so the page can highlight the matching result card. */
+    onProviderFocus?: (id: string | null) => void;
+    /** Fires when the user presses "Search this area" with the current camera box. */
+    onSearchArea?: (box: MapBox) => void;
+    /** The active map-area filter, or null. */
+    mapArea?: MapBox | null;
+    /**
+     * Changes only when a NON-spatial filter changes. The refit keys on this
+     * instead of on `providers`, so a map-driven search cannot re-trigger it.
+     */
+    fitKey?: string;
+    /** Ceiling on how many pins are drawn at once. See DEFAULT_MAX_PINS. */
+    maxPins?: number;
+    /**
+     * Reports how many pins are actually drawn vs how many results exist, so the
+     * page can tell the user the map is showing a subset.
+     */
+    onVisibleCountChange?: (shown: number, total: number, capped: boolean) => void;
 }
 
-interface Box { north: number; south: number; east: number; west: number }
-
 /** Bounding box of a provider set, or null when there is nothing to bound. */
-function boundsOf(list: Provider[]): Box | null {
+function boundsOf(list: Provider[]): MapBox | null {
     const pts = list.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
     if (pts.length === 0) return null;
 
@@ -96,6 +92,26 @@ function boundsOf(list: Provider[]): Box | null {
     return { north, south, east, west };
 }
 
+/** Exact equality, used to keep an unchanged camera from re-rendering. */
+function sameBox(a: MapBox, b: MapBox): boolean {
+    return a.north === b.north && a.south === b.south
+        && a.east === b.east && a.west === b.west;
+}
+
+/**
+ * Has the camera moved far enough that there is genuinely something new to
+ * search? Measured against the current span rather than in fixed degrees, so
+ * the answer means the same thing at street level as it does metro-wide.
+ */
+function movedMaterially(camera: MapBox, area: MapBox): boolean {
+    const latSpan = Math.abs(camera.north - camera.south) || 1e-6;
+    const lngSpan = Math.abs(camera.east - camera.west) || 1e-6;
+    return Math.abs(camera.north - area.north) / latSpan > AREA_CHANGE_THRESHOLD
+        || Math.abs(camera.south - area.south) / latSpan > AREA_CHANGE_THRESHOLD
+        || Math.abs(camera.east - area.east) / lngSpan > AREA_CHANGE_THRESHOLD
+        || Math.abs(camera.west - area.west) / lngSpan > AREA_CHANGE_THRESHOLD;
+}
+
 function escapeHtml(s: string): string {
     return s.replace(/[&<>"']/g, (c) => (
         { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string
@@ -104,15 +120,20 @@ function escapeHtml(s: string): string {
 
 export function MapView({
     providers, allProviders, selectedProvider, onProviderSelect, hoveredId = null,
+    onProviderFocus, onSearchArea, mapArea = null, fitKey,
+    maxPins = DEFAULT_MAX_PINS, onVisibleCountChange,
 }: MapViewProps) {
     const { t } = useTranslation();
     const containerRef = useRef<HTMLDivElement>(null);
     const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
     const markersRef = useRef<Map<string, google.maps.Marker>>(new Map());
     const infoRef = useRef<google.maps.InfoWindow | null>(null);
-    const cellByKeyRef = useRef<Map<string, Cell>>(new Map());
+    /** Marker key -> the provider that marker currently stands for. */
+    const cellByKeyRef = useRef<Map<string, string>>(new Map());
     const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
     const userMarkerRef = useRef<google.maps.Marker | null>(null);
+    /** Camera box as of the last idle, driving the "Search this area" offer. */
+    const [cameraBox, setCameraBox] = useState<MapBox | null>(null);
 
     /**
      * Marker listeners are attached once, at creation, and read their callbacks
@@ -121,9 +142,23 @@ export function MapView({
      */
     const providersByIdRef = useRef<Map<string, Provider>>(new Map());
     const onSelectRef = useRef(onProviderSelect);
+    const onFocusRef = useRef(onProviderFocus);
     const selectedIdRef = useRef<string | null>(null);
     const hoveredIdRef = useRef<string | null>(null);
     const overviewHtmlRef = useRef<(p: Provider) => string>(() => '');
+
+    /**
+     * The draw pass reads these rather than closing over them, so changing the
+     * result set or the cap never means tearing down and re-attaching the
+     * 'idle' listener and every marker listener under it.
+     */
+    const providersRef = useRef<Provider[]>(providers);
+    const maxPinsRef = useRef(maxPins);
+    const onVisibleCountChangeRef = useRef(onVisibleCountChange);
+    /** Last (shown, total) reported, so an idle that changes nothing stays quiet. */
+    const lastCountRef = useRef<{ shown: number; total: number; capped: boolean } | null>(null);
+    /** The live draw pass, so a result-set change can redraw without a camera move. */
+    const drawRef = useRef<() => void>(() => { });
 
     const providersById = useMemo(() => new Map(providers.map((p) => [p.id, p])), [providers]);
 
@@ -140,24 +175,25 @@ export function MapView({
         isSelected: boolean,
         isHovered = false,
     ): google.maps.Symbol => {
-        // Hover borrows the selected colour but not its size, so passing the
-        // cursor down a list reads as a highlight rather than as fourteen
-        // separate selections.
-        const fill = isSelected || isHovered
-            ? '#1b1d22'
-            : provider.promoted
-                ? '#0f6b52'
-                : provider.country === 'MX'
-                    ? '#3f6b52'
-                    : '#3f5570';
+        // Three states have to be tellable apart at a glance, on a pin eight
+        // pixels across. Selected is a filled dark disc; hover inverts it —
+        // white disc, heavy dark ring — so it reads as "this one" without
+        // reading as a second selection; everything else keeps its side-of-
+        // the-border tint. Hover used to share the selected fill and differ
+        // only by one pixel of radius, which was no signal at all.
+        const idleFill = provider.promoted
+            ? '#0f6b52'
+            : provider.country === 'MX'
+                ? '#3f6b52'
+                : '#3f5570';
 
         return {
             path: google.maps.SymbolPath.CIRCLE,
-            fillColor: fill,
+            fillColor: isSelected ? '#1b1d22' : isHovered ? '#ffffff' : idleFill,
             fillOpacity: 1,
-            strokeColor: '#ffffff',
-            strokeWeight: isSelected ? 4 : isHovered ? 3.5 : 2.5,
-            scale: isSelected ? 13 : isHovered ? 12 : provider.promoted ? 10 : 8,
+            strokeColor: isHovered ? '#1b1d22' : '#ffffff',
+            strokeWeight: isSelected ? 4 : isHovered ? 5 : 2.5,
+            scale: isSelected ? 13 : isHovered ? 11 : provider.promoted ? 10 : 8,
         };
     }, []);
 
@@ -230,9 +266,16 @@ export function MapView({
      */
     useEffect(() => {
         providersByIdRef.current = providersById;
+        providersRef.current = providers;
+        maxPinsRef.current = maxPins;
         onSelectRef.current = onProviderSelect;
+        onFocusRef.current = onProviderFocus;
+        onVisibleCountChangeRef.current = onVisibleCountChange;
         overviewHtmlRef.current = overviewHtml;
-    }, [providersById, onProviderSelect, overviewHtml]);
+    }, [
+        providersById, providers, maxPins, onProviderSelect, onProviderFocus,
+        onVisibleCountChange, overviewHtml,
+    ]);
 
     // ── Init map ───────────────────────────────────────────────────────────
     useEffect(() => {
@@ -287,17 +330,31 @@ export function MapView({
     }, [mapInstance, region]);
 
     // ── Frame the visible clinics ──────────────────────────────────────────
+    /**
+     * Keying this on `providers` is a ratchet once the viewport itself filters
+     * results: pan -> fewer results -> new `providers` identity -> refit, and
+     * FIT_PADDING means each refit lands on a strictly tighter box than the one
+     * that produced it, until the map bottoms out on a pin or two. So when the
+     * page hands us a `fitKey` — which changes only for non-spatial filters —
+     * we key on that and read the list through a ref. Without one we keep the
+     * old `providers`-keyed behaviour so the component still works standalone.
+     */
+    const fitDep = fitKey ?? providers;
     useEffect(() => {
         if (!mapInstance) return;
         // Selecting a clinic has its own camera move; don't fight it.
         if (selectedProvider) return;
+        // A map-area search means the user chose this camera. Refitting would
+        // move it out from under them, and then filter on where it landed.
+        if (mapArea) return;
 
-        const box = boundsOf(providers);
+        const list = providersRef.current;
+        const box = boundsOf(list);
         if (!box) return;
 
         // A single result would otherwise zoom to max; give it a neighbourhood.
-        if (providers.length === 1) {
-            mapInstance.setCenter({ lat: providers[0].lat, lng: providers[0].lng });
+        if (list.length === 1) {
+            mapInstance.setCenter({ lat: list[0].lat, lng: list[0].lng });
             mapInstance.setZoom(14);
             return;
         }
@@ -310,7 +367,7 @@ export function MapView({
             FIT_PADDING,
         );
         // Refit whenever the result set changes — that is the point of the filter.
-    }, [mapInstance, providers, selectedProvider]);
+    }, [mapInstance, fitDep, selectedProvider, mapArea]);
 
     // ── Container resize ───────────────────────────────────────────────────
     /**
@@ -345,33 +402,15 @@ export function MapView({
         return () => observer.disconnect();
     }, [mapInstance]);
 
-    // -- Cluster index (raw points, not marker objects) ---------------------
-    /**
-     * The index holds plain {lat, lng, id} points, never google.maps.Marker
-     * objects. Building ~4,000 markers up front was the load cost, and most of
-     * them were never on screen. Supercluster indexes the points in a few
-     * milliseconds; markers are materialised only for what the current viewport
-     * actually renders -- typically a few dozen.
-     */
-    const clusterIndex = useMemo(() => {
-        const index = new Supercluster<{ providerId: string }>({
-            radius: 90,
-            maxZoom: 15,
-            minPoints: 3,
-        });
-        index.load(
-            providers
-                .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
-                .map((p) => ({
-                    type: 'Feature' as const,
-                    properties: { providerId: p.id },
-                    geometry: { type: 'Point' as const, coordinates: [p.lng, p.lat] },
-                })),
-        );
-        return index;
-    }, [providers]);
-
     // -- Render whatever the viewport currently needs -----------------------
+    /**
+     * Every pin on screen is exactly one provider. Clustering used to stand in
+     * for the ~4,000-pin load cost, but a metro-wide search folds nearly every
+     * result into a bubble, and a bubble cannot light up when its card is
+     * hovered — the list-to-map bridge silently stopped working for almost
+     * every result. The viewport filter plus `maxPins` buys back the same
+     * performance without ever hiding a provider inside an aggregate.
+     */
     useEffect(() => {
         if (!mapInstance) return;
 
@@ -382,40 +421,63 @@ export function MapView({
 
         const draw = () => {
             const bounds = mapInstance.getBounds();
-            const zoom = mapInstance.getZoom();
-            if (!bounds || zoom == null) return;
+            if (!bounds) return;
 
             const sw = bounds.getSouthWest();
             const ne = bounds.getNorthEast();
-            const cells = clusterIndex.getClusters(
-                [sw.lng(), sw.lat(), ne.lng(), ne.lat()],
-                Math.round(zoom),
-            );
+            const box: MapBox = {
+                south: sw.lat(), west: sw.lng(), north: ne.lat(), east: ne.lng(),
+            };
+            // Offer "Search this area" against wherever the camera settled.
+            setCameraBox((prev) => (prev && sameBox(prev, box) ? prev : box));
 
-            // Largest cluster in this viewport, computed once — the bubble
-            // shading is relative to it. Doing this per marker meant a fresh
-            // world-wide cluster query for every bubble drawn.
-            let largest = 1;
-            for (const cell of cells) {
-                const n = (cell.properties as ClusterProps).point_count;
-                if (n && n > largest) largest = n;
+            const list = providersRef.current;
+            const cap = Math.max(maxPinsRef.current, 1);
+
+            /**
+             * `providers` arrives already sorted by the active sort mode
+             * (relevance / rating / reviews / distance / price), so taking the
+             * first N in array order is not arbitrary truncation — it is "the N
+             * best results currently in view", which is the same ranking the
+             * list panel is showing. Any other rule (random, geographic
+             * thinning) would put pins on screen that the user cannot find in
+             * the list.
+             */
+            const drawn: Provider[] = [];
+            let capped = false;
+            for (const p of list) {
+                if (drawn.length >= cap) { capped = true; break; }
+                if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
+                if (!bounds.contains(new google.maps.LatLng(p.lat, p.lng))) continue;
+                drawn.push(p);
+            }
+
+            // The selected and hovered pins are never subject to the cap. A
+            // hovered card whose pin was suppressed is exactly the bug this
+            // whole rewrite exists to kill.
+            //
+            // The exemption stops at the viewport edge, though. Marking a
+            // provider that is off screen builds a marker nobody can see, so
+            // it costs a draw pass and pays back nothing.
+            for (const id of [selectedIdRef.current, hoveredIdRef.current]) {
+                if (!id || drawn.some((p) => p.id === id)) continue;
+                const pinned = providersByIdRef.current.get(id);
+                if (!pinned || !Number.isFinite(pinned.lat) || !Number.isFinite(pinned.lng)) continue;
+                if (!bounds.contains(new google.maps.LatLng(pinned.lat, pinned.lng))) continue;
+                drawn.push(pinned);
             }
 
             const needed = new Set<string>();
 
-            for (const cell of cells) {
-                const [lng, lat] = cell.geometry.coordinates;
-                const clusterId = (cell.properties as ClusterProps).cluster_id;
-                const isCluster = Boolean((cell.properties as ClusterProps).cluster);
-                const providerId = (cell.properties as { providerId?: string }).providerId;
-                const key = isCluster ? 'c' + clusterId : 'p' + providerId;
+            for (const provider of drawn) {
+                const key = 'p' + provider.id;
                 needed.add(key);
 
                 let marker = markersRef.current.get(key);
                 if (!marker) {
                     marker = new google.maps.Marker({
                         map: mapInstance,
-                        position: { lat, lng },
+                        position: { lat: provider.lat, lng: provider.lng },
                         optimized: true,
                     });
                     markersRef.current.set(key, marker);
@@ -424,62 +486,40 @@ export function MapView({
                     // the marker currently represents from a ref, so a recycled
                     // marker never fires a stale handler.
                     marker.addListener('click', () => {
-                        const current = cellByKeyRef.current.get(key);
-                        if (!current) return;
+                        const id = cellByKeyRef.current.get(key);
+                        if (!id) return;
                         info.close();
-                        if (current.kind === 'cluster') {
-                            mapInstance.setZoom(current.expansionZoom);
-                            mapInstance.panTo(current.position);
-                        } else {
-                            const provider = providersByIdRef.current.get(current.providerId);
-                            if (provider) onSelectRef.current(provider);
-                        }
+                        const current = providersByIdRef.current.get(id);
+                        if (current) onSelectRef.current(current);
                     });
                     marker.addListener('mouseover', () => {
-                        const current = cellByKeyRef.current.get(key);
-                        if (!current || current.kind === 'cluster') return;
-                        const provider = providersByIdRef.current.get(current.providerId);
-                        if (!provider) return;
-                        info.setContent(overviewHtmlRef.current(provider));
+                        const id = cellByKeyRef.current.get(key);
+                        if (!id) return;
+                        const current = providersByIdRef.current.get(id);
+                        if (!current) return;
+                        info.setContent(overviewHtmlRef.current(current));
                         info.open({ map: mapInstance, anchor: marker });
+                        // Highlight only — the cursor crosses a dozen pins while
+                        // panning, and scrolling the list on each would jerk the
+                        // page. Scrolling stays on click, via onProviderSelect.
+                        onFocusRef.current?.(current.id);
                     });
-                    marker.addListener('mouseout', () => info.close());
+                    marker.addListener('mouseout', () => {
+                        info.close();
+                        onFocusRef.current?.(null);
+                    });
                 } else {
-                    marker.setPosition({ lat, lng });
+                    marker.setPosition({ lat: provider.lat, lng: provider.lng });
                 }
 
-                if (isCluster) {
-                    const count = (cell.properties as ClusterProps).point_count ?? 0;
-                    cellByKeyRef.current.set(key, {
-                        kind: 'cluster',
-                        position: { lat, lng },
-                        expansionZoom: Math.min(
-                            clusterIndex.getClusterExpansionZoom(clusterId as number),
-                            20,
-                        ),
-                    });
-                    marker.setIcon(clusterIcon(count, largest));
-                    marker.setLabel({
-                        text: String(count),
-                        color: '#ffffff',
-                        fontSize: '13px',
-                        fontWeight: '600',
-                    });
-                    marker.setTitle(count + ' providers');
-                    marker.setZIndex(1000 + count);
-                } else {
-                    const provider = providerId ? providersByIdRef.current.get(providerId) : undefined;
-                    if (!provider) continue;
-                    cellByKeyRef.current.set(key, { kind: 'provider', providerId: provider.id });
-                    const isSelected = selectedIdRef.current === provider.id;
-                    const isHovered = hoveredIdRef.current === provider.id;
-                    marker.setIcon(makeIcon(provider, isSelected, isHovered));
-                    marker.setLabel(null);
-                    marker.setTitle(provider.name);
-                    marker.setZIndex(
-                        isSelected ? 999 : isHovered ? 998 : provider.promoted ? 50 : 1,
-                    );
-                }
+                cellByKeyRef.current.set(key, provider.id);
+                const isSelected = selectedIdRef.current === provider.id;
+                const isHovered = hoveredIdRef.current === provider.id;
+                marker.setIcon(makeIcon(provider, isSelected, isHovered));
+                marker.setTitle(provider.name);
+                marker.setZIndex(
+                    isSelected ? 999 : isHovered ? 998 : provider.promoted ? 50 : 1,
+                );
             }
 
             // Retire anything the new viewport no longer needs.
@@ -490,12 +530,61 @@ export function MapView({
                 markersRef.current.delete(key);
                 cellByKeyRef.current.delete(key);
             }
+
+            // 'idle' fires on every settle, including ones that changed
+            // nothing; only report a genuinely new pair or the page re-renders
+            // its "showing N of M" line for no reason.
+            const shown = drawn.length;
+            const total = list.length;
+            /**
+             * Which limit bit matters to the reader, because the two point in
+             * opposite directions. If the cap bound, a tighter view has fewer
+             * candidates and stops hitting it — zoom IN. If the viewport bound,
+             * the missing results are outside the frame — zoom OUT. Reporting
+             * only the numbers left the page guessing, and it guessed wrong.
+             */
+            const last = lastCountRef.current;
+            if (!last || last.shown !== shown || last.total !== total || last.capped !== capped) {
+                lastCountRef.current = { shown, total, capped };
+                onVisibleCountChangeRef.current?.(shown, total, capped);
+            }
         };
 
+        drawRef.current = draw;
         draw();
         const listener = mapInstance.addListener('idle', draw);
         return () => listener.remove();
-    }, [mapInstance, clusterIndex, makeIcon]);
+    }, [mapInstance, makeIcon]);
+
+    /**
+     * Is this provider inside the camera box right now?
+     *
+     * Hover and selection redraw only for a provider the *cap* suppressed,
+     * never for one that is simply off screen. Without the distinction,
+     * scrubbing a list of 807 results — most of which sit outside the current
+     * view — fires a full draw pass per row, which is the "moving down a list
+     * feels like dragging" failure the ref-based listener architecture exists
+     * to prevent. It also stopped short of helping: the marker the exemption
+     * built landed outside the viewport, so the redraw was paid for and
+     * nothing lit up.
+     */
+    const isInView = useCallback((id: string | null): boolean => {
+        if (!id || !mapInstance) return false;
+        const p = providersByIdRef.current.get(id);
+        if (!p || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return false;
+        const bounds = mapInstance.getBounds();
+        return bounds ? bounds.contains(new google.maps.LatLng(p.lat, p.lng)) : false;
+    }, [mapInstance]);
+
+    /**
+     * A new result set usually moves the camera, and the resulting 'idle' would
+     * redraw for us — but not when the new results happen to fit the same box
+     * (a rating filter inside one neighbourhood, say). Redraw explicitly so the
+     * pins can never be a search behind the list.
+     */
+    useEffect(() => {
+        drawRef.current();
+    }, [providers, maxPins, mapInstance]);
 
     // -- Selection styling --------------------------------------------------
     // Only the two affected markers are touched, instead of all of them.
@@ -505,9 +594,12 @@ export function MapView({
         if (previousId === nextId) return;
         selectedIdRef.current = nextId;
 
+        // Same cap exemption as hover: a selection past the cap needs a redraw
+        // before it has a marker to restyle.
+        if (nextId && !markersRef.current.has('p' + nextId) && isInView(nextId)) drawRef.current();
         restyle(previousId);
         restyle(nextId);
-    }, [selectedProvider, restyle]);
+    }, [selectedProvider, restyle, isInView]);
 
     // ── Hover styling ──────────────────────────────────────────────────────
     /**
@@ -515,16 +607,19 @@ export function MapView({
      * are touched — restyling all of them on every mouse move made moving down
      * a list of results feel like dragging.
      *
-     * A provider still folded into a cluster has no marker of its own; nothing
-     * lights up, and that is correct. Zooming in is what splits the cluster.
+     * Hovering a card whose provider is on screen but past the pin cap would
+     * light up nothing, so redraw first: the cap exempts the hovered provider,
+     * and the marker exists by the time we restyle it. A provider that is off
+     * screen entirely gets no redraw — see isInView.
      */
     useEffect(() => {
         const previousId = hoveredIdRef.current;
         if (previousId === hoveredId) return;
         hoveredIdRef.current = hoveredId;
+        if (hoveredId && !markersRef.current.has('p' + hoveredId) && isInView(hoveredId)) drawRef.current();
         restyle(previousId);
         restyle(hoveredId);
-    }, [hoveredId, restyle]);
+    }, [hoveredId, restyle, isInView]);
     // ── Pan to selected ────────────────────────────────────────────────────
     useEffect(() => {
         if (!mapInstance || !selectedProvider) return;
@@ -571,6 +666,15 @@ export function MapView({
             userMarkerRef.current.setPosition(userLoc);
         }
     }, [userLoc, mapInstance]);
+
+    // ── "Search this area" ─────────────────────────────────────────────────
+    /**
+     * Offered only when pressing it would actually change something: the page
+     * has to want map-area searches at all, and the camera has to sit somewhere
+     * other than the area already being searched.
+     */
+    const canSearchArea = Boolean(onSearchArea) && cameraBox !== null
+        && (!mapArea || movedMaterially(cameraBox, mapArea));
 
     // ── No API key — static preview ───────────────────────────────────────
     if (!API_KEY) {
@@ -662,6 +766,31 @@ export function MapView({
             >
                 <IconLocate size={21} />
             </button>
+
+            {canSearchArea && (
+                <button
+                    onClick={() => cameraBox && onSearchArea?.(cameraBox)}
+                    className="press"
+                    style={{
+                        position: 'absolute',
+                        bottom: '28px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        padding: '0.6rem 1.15rem',
+                        borderRadius: 'var(--radius-pill)',
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border-strong)',
+                        boxShadow: 'var(--shadow)',
+                        color: 'var(--brand)',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap',
+                        zIndex: 10,
+                    }}
+                >
+                    {t('map.searchThisArea')}
+                </button>
+            )}
         </div>
     );
 }

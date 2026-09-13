@@ -55,6 +55,8 @@
     "radiusKm": "{{km}} km",
     "radiusLabel": "Radio de búsqueda",
     "clearPostal": "Quitar filtro de ubicación",
+    "mapArea": "Área del mapa",
+    "clearMapArea": "Quitar filtro de área del mapa",
     "specialtyGroup": "Especialidad",
     "insuranceGroup": "Seguros aceptados",
     "insuranceSearch": "Buscar aseguradora",
@@ -92,7 +94,10 @@
     "previewMode": "Vista previa del mapa",
     "previewHint": "Agrega VITE_GOOGLE_MAPS_API_KEY a .env.local para cargar el mapa en vivo.",
     "listShort": "Lista",
-    "mapShort": "Mapa"
+    "mapShort": "Mapa",
+    "searchThisArea": "Buscar en esta zona",
+    "showingCapped": "Mostrando los {{shown}} primeros de {{total}} aquí. Acerca el mapa para verlos todos.",
+    "showingInView": "Mostrando {{shown}} de {{total}} en el mapa. Aleja el mapa para ver el resto."
   },
   "drawer": {
     "rating": "Calificación",
@@ -194,6 +199,8 @@
     "formCity": "Ciudad",
     "formSelect": "Selecciona una",
     "formOther": "Otro lugar",
+    "formCityOtherLabel": "¿Qué ciudad?",
+    "formCityOtherPlaceholder": "Ciudad, estado o provincia",
     "formMessage": "¿Algo más?",
     "formMessagePlaceholder": "Horarios, idiomas que hablan, seguros que aceptan",
     "formSubmit": "Enviar solicitud",

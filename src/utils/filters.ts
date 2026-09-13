@@ -17,6 +17,7 @@ export const defaultFilters: ProviderFilters = {
     sort: 'relevance',
     postalCode: '',
     radiusKm: DEFAULT_RADIUS_KM,
+    mapArea: null,
 };
 
 /**
@@ -25,6 +26,16 @@ export const defaultFilters: ProviderFilters = {
  * Drives the count on the "Filters (2)" button and the badge on the mobile
  * sheet — with the rail closed, this is the only signal that results are being
  * filtered at all.
+ *
+ * `mapArea` is deliberately NOT counted, and this is not an oversight.
+ * SearchPage derives `searching = filters.search !== '' || activeCount > 0`,
+ * and `searching` is what decides whether the map mounts at all. If a map area
+ * counted here, a URL carrying only `?area=…` would open the results view with
+ * no query behind it — and the map that produced those bounds is unreachable
+ * from the landing page by design, so the box could never have been drawn.
+ * A bootstrapping paradox. The chip that makes a map area visible and
+ * removable lives in FilterSummary, which gates on `filters.mapArea`
+ * separately. Do not "fix" this omission.
  */
 export function countActiveFilters(filters: ProviderFilters): number {
     let n = 0;
@@ -50,6 +61,12 @@ export interface FilterContext {
 }
 
 /**
+ * One axis to release, or several. Callers that release a single facet pass a
+ * bare key; callers that also hold an axis permanently released pass an array.
+ */
+export type SkipAxis = keyof ProviderFilters | (keyof ProviderFilters)[];
+
+/**
  * Everything except the free-text query.
  *
  * Split out from `applyFilters` because the facet counts need to ask "how many
@@ -59,10 +76,18 @@ export function matchesFilters(
     p: Provider,
     filters: ProviderFilters,
     ctx: FilterContext,
-    /** Axis to ignore, so a facet can count its own options without excluding them. */
-    skip?: keyof ProviderFilters,
+    /**
+     * Axis (or axes) to ignore, so a facet can count its own options without
+     * excluding them. An array lets a caller release its own axis *and* hold a
+     * second one permanently released — see the facet pass in useProviders,
+     * which keeps chip counts describing the query rather than the camera.
+     */
+    skip?: SkipAxis,
 ): boolean {
-    if (filters.postalCode && skip !== 'postalCode') {
+    const skipped = (key: keyof ProviderFilters) =>
+        Array.isArray(skip) ? skip.includes(key) : skip === key;
+
+    if (filters.postalCode && !skipped('postalCode')) {
         // An unknown code yields no centre; returning false here is deliberate,
         // so the UI can say "no such code" rather than silently ignoring it.
         if (!ctx.centre) return false;
@@ -70,29 +95,39 @@ export function matchesFilters(
         if (distanceKm(ctx.centre.lat, ctx.centre.lng, p.lat, p.lng) > filters.radiusKm) return false;
     }
 
-    if (skip !== 'specialty' && filters.specialty.length) {
+    if (filters.mapArea && !skipped('mapArea')) {
+        // A plain inclusive box test. No antimeridian wrapping is handled here
+        // and none is needed: the map restricts panning to the border region,
+        // so a box straddling ±180° is unreachable. Adding wrap handling would
+        // be dead code guarding an impossible camera — please leave it out.
+        const b = filters.mapArea;
+        if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return false;
+        if (p.lat < b.south || p.lat > b.north || p.lng < b.west || p.lng > b.east) return false;
+    }
+
+    if (!skipped('specialty') && filters.specialty.length) {
         if (!filters.specialty.some((s) => p.specialty.includes(s))) return false;
     }
 
-    if (skip !== 'country' && filters.country && p.country !== filters.country) return false;
+    if (!skipped('country') && filters.country && p.country !== filters.country) return false;
 
-    if (skip !== 'minRating' && p.rating < filters.minRating) return false;
+    if (!skipped('minRating') && p.rating < filters.minRating) return false;
 
-    if (skip !== 'insurances' && filters.insurances.length) {
+    if (!skipped('insurances') && filters.insurances.length) {
         const held = p.insurances ?? [];
         if (!filters.insurances.some((i) => held.includes(i))) return false;
     }
 
-    if (skip !== 'languages' && filters.languages.length) {
+    if (!skipped('languages') && filters.languages.length) {
         const held = p.languages ?? [];
         if (!filters.languages.some((l) => held.includes(l))) return false;
     }
 
-    if (skip !== 'bookableOnly' && filters.bookableOnly && !p.bookingUrl) return false;
+    if (!skipped('bookableOnly') && filters.bookableOnly && !p.bookingUrl) return false;
 
-    if (skip !== 'verifiedOnly' && filters.verifiedOnly && !p.verified) return false;
+    if (!skipped('verifiedOnly') && filters.verifiedOnly && !p.verified) return false;
 
-    if (skip !== 'withPricing' && filters.withPricing) {
+    if (!skipped('withPricing') && filters.withPricing) {
         if (p.priceFromMxn == null) return false;
         if (filters.maxPriceMxn != null && p.priceFromMxn > filters.maxPriceMxn) return false;
     }
@@ -108,6 +143,9 @@ export function matchesFilters(
  * best-rated otherwise. Choosing here rather than in the UI keeps the sort
  * dropdown honest — it never displays an order that isn't in effect.
  */
+// `mapArea` is deliberately absent below: a bounding box carries no centre, so
+// it cannot imply a distance sort. A viewport narrows the list; it does not
+// reorder it.
 function effectiveSort(filters: ProviderFilters, ctx: FilterContext): SortMode {
     if (filters.sort !== 'relevance') return filters.sort;
     if (ctx.terms.length) return 'relevance';

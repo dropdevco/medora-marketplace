@@ -16,13 +16,13 @@ import { trackProviderClick } from '../utils/analytics';
 import { distanceKm } from '../utils/geo';
 import { countActiveFilters } from '../utils/filters';
 import { buildDiscoverRows } from '../utils/discover';
-import type { Provider, ProviderFilters, Specialty } from '../types/provider';
+import type { MapBox, Provider, ProviderFilters, Specialty } from '../types/provider';
 
 /**
- * The map is the heaviest thing this app can load — the Google Maps SDK,
- * supercluster and a 600-line view. It is now unreachable until a search has
- * been run, so splitting it out is no longer just a nice-to-have: the landing
- * page genuinely never pays for it.
+ * The map is the heaviest thing this app can load — the Google Maps SDK and
+ * an 800-line view. It is unreachable until a search has been run, so
+ * splitting it out is no longer just a nice-to-have: the landing page
+ * genuinely never pays for it.
  */
 const MapView = lazy(() =>
     import('../components/map/MapView').then((m) => ({ default: m.MapView })),
@@ -68,6 +68,17 @@ export function SearchPage() {
     const [heroOpen, setHeroOpen] = useState(false);
     /** The card under the cursor. Forwarded to the map, which lights its pin. */
     const [hoveredId, setHoveredId] = useState<string | null>(null);
+    /** The pin under the cursor. The return leg: lights the matching card. */
+    const [focusedId, setFocusedId] = useState<string | null>(null);
+    /**
+     * How many pins the map is actually drawing, against how many results the
+     * list holds. The map caps what it renders, so these disagree on any broad
+     * search — and a map showing 150 of 807 with nothing saying so reads as a
+     * map that lost most of the results.
+     */
+    const [pinCount, setPinCount] = useState<
+        { shown: number; total: number; capped: boolean } | null
+    >(null);
 
     /**
      * The sticky toolbar's real height. The map column parks directly under it,
@@ -144,13 +155,37 @@ export function SearchPage() {
         estimateSize: () => ROW_HEIGHT + ROW_GAP,
         overscan: 6,
         scrollMargin: listTop,
+        // Without this, a card scrolled to from the map parks underneath the
+        // nav and the sticky toolbar, which is the one place you cannot read it.
+        scrollPaddingStart: NAV_HEIGHT + bandHeight,
     });
+
+    /**
+     * Every filter EXCEPT the map viewport, as a comparable string.
+     *
+     * Two effects key on it rather than on `filters`, and both would misbehave
+     * otherwise. The map refits its camera to the results; if a map-driven
+     * search re-triggered that refit, the padded fit would land on a tighter
+     * box than the one that produced it, filter again, and ratchet inward
+     * until a couple of pins are left. And the scroll-to-top below would yank
+     * the list back to row one every time the user searched an area.
+     */
+    const fitKey = useMemo(
+        () => JSON.stringify({ ...filters, mapArea: null }),
+        [filters],
+    );
+
+    /** Result index by provider id, so a map click can scroll the list to it. */
+    const indexById = useMemo(
+        () => new Map(providers.map((p, i) => [p.id, i])),
+        [providers],
+    );
 
     // A filter change can shorten the list under a scrolled-down window, which
     // otherwise leaves the user staring at blank space below the last result.
     useEffect(() => {
         if (view === 'list') window.scrollTo({ top: 0 });
-    }, [filters, view]);
+    }, [fitKey, view]);
 
     const runSearch = useCallback((patch: Partial<ProviderFilters>) => {
         setHeroOpen(false);
@@ -161,6 +196,38 @@ export function SearchPage() {
         trackProviderClick(p);
         setSelectedProvider((current) => (current?.id === p.id ? null : p));
     }, [setSelectedProvider]);
+
+    /**
+     * A pin was clicked. Bring its row into view.
+     *
+     * Only on click, never on hover — the cursor crosses a lot of pins while
+     * panning, and scrolling under each one turns the list into a slot machine.
+     * 'auto' rather than 'smooth': the rows measure themselves, and a smooth
+     * scroll races that re-measure into a visible overshoot.
+     */
+    const handleProviderFromMap = useCallback((p: Provider) => {
+        handleSelect(p);
+        if (view !== 'list') return;
+        const index = indexById.get(p.id);
+        if (index !== undefined) {
+            rowVirtualizer.scrollToIndex(index, { align: 'center', behavior: 'auto' });
+        }
+    }, [handleSelect, indexById, view, rowVirtualizer]);
+
+    /** "Search this area" — narrow the results to the current camera box. */
+    const handleSearchArea = useCallback((box: MapBox) => {
+        // Replace rather than push: panning should not turn Back into a
+        // re-enactment of every camera move the user made.
+        patchFilters({ mapArea: box }, true);
+    }, [patchFilters]);
+
+    const handleVisibleCount = useCallback((shown: number, total: number, capped: boolean) => {
+        setPinCount((prev) => (
+            prev && prev.shown === shown && prev.total === total && prev.capped === capped
+                ? prev
+                : { shown, total, capped }
+        ));
+    }, []);
 
     const handleProviderSuggestion = useCallback((id: string) => {
         const p = allProviders.find((x) => x.id === id);
@@ -282,6 +349,7 @@ export function SearchPage() {
                                                         selected={selectedProvider?.id === p.id}
                                                         onClick={handleSelect}
                                                         onHover={setHoveredId}
+                                                        focused={focusedId === p.id}
                                                         distance={distanceOf(p)}
                                                     />
                                                 </div>
@@ -301,13 +369,29 @@ export function SearchPage() {
                                 height: `calc(100dvh - ${NAV_HEIGHT + bandHeight}px)`,
                             }}
                         >
+                            {/* The map draws a capped subset of the results.
+                                Saying so is what keeps a map showing 150 of 807
+                                from reading as a map that lost 657 clinics. */}
+                            {pinCount && pinCount.shown < pinCount.total && (
+                                <div className="ms-map-note" role="status">
+                                    {t(pinCount.capped ? 'map.showingCapped' : 'map.showingInView', {
+                                        shown: pinCount.shown,
+                                        total: pinCount.total,
+                                    })}
+                                </div>
+                            )}
                             <Suspense fallback={<MapPlaceholder label={t('map.loading')} />}>
                                 <MapView
                                     providers={providers}
                                     allProviders={allProviders}
                                     selectedProvider={selectedProvider}
-                                    onProviderSelect={handleSelect}
+                                    onProviderSelect={handleProviderFromMap}
                                     hoveredId={hoveredId}
+                                    onProviderFocus={setFocusedId}
+                                    onSearchArea={handleSearchArea}
+                                    mapArea={filters.mapArea}
+                                    fitKey={fitKey}
+                                    onVisibleCountChange={handleVisibleCount}
                                 />
                             </Suspense>
                         </div>

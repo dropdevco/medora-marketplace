@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { Provider, ProviderFilters, Specialty, SortMode } from '../types/provider';
+import type { MapBox, Provider, ProviderFilters, Specialty, SortMode } from '../types/provider';
 import { SpecialtyLabels } from '../types/provider';
 import { supabase } from '../lib/supabase';
 import { mockProviders } from '../data/providers';
@@ -72,7 +72,44 @@ function parseFilters(params: URLSearchParams): ProviderFilters {
         sort: sort && SORT_MODES.has(sort) ? sort : 'relevance',
         postalCode: params.get('near') ?? '',
         radiusKm: num('r', DEFAULT_RADIUS_KM),
+        mapArea: parseArea(params.get('area')),
     };
+}
+
+/** How many decimals survive into the URL. 4dp ≈ 11 m, finer than any pixel. */
+const AREA_DP = 4;
+
+/**
+ * `area=south,west,north,east` — one param, four decimal degrees, in the same
+ * order Google hands back a LatLngBounds (sw, ne).
+ *
+ * Parsed strictly: anything that is not exactly four finite numbers forming a
+ * non-degenerate box is treated as absent. A hand-edited or truncated param
+ * must never throw, and must never survive as a box that filters the whole
+ * directory away — an empty result page with no visible cause is worse than
+ * silently ignoring the param.
+ */
+function parseArea(raw: string | null): MapBox | null {
+    if (!raw) return null;
+    const parts = raw.split(',');
+    if (parts.length !== 4) return null;
+
+    const [south, west, north, east] = parts.map(Number);
+    if (![south, west, north, east].every(Number.isFinite)) return null;
+    if (south < -90 || north > 90 || west < -180 || east > 180) return null;
+    // Strict: a zero-height or zero-width box, and any inverted box (which is
+    // what a wrapped or scrambled param looks like), matches nothing.
+    if (south >= north || west >= east) return null;
+
+    return { north, south, east, west };
+}
+
+function serializeArea(b: MapBox): string {
+    const r = (n: number) => Number(n.toFixed(AREA_DP));
+    // Rounded on the way out, not on the way in: un-rounded floats churn the
+    // URL on every sub-pixel camera settle, which defeats any identity check
+    // built on the serialised string and floods the history stack.
+    return [r(b.south), r(b.west), r(b.north), r(b.east)].join(',');
 }
 
 function serializeFilters(f: ProviderFilters): URLSearchParams {
@@ -92,6 +129,7 @@ function serializeFilters(f: ProviderFilters): URLSearchParams {
         p.set('near', f.postalCode);
         if (f.radiusKm !== DEFAULT_RADIUS_KM) p.set('r', String(f.radiusKm));
     }
+    if (f.mapArea) p.set('area', serializeArea(f.mapArea));
     return p;
 }
 
@@ -262,9 +300,24 @@ export function useProviders() {
         [searchIndex, centre],
     );
 
+    /**
+     * The map viewport is released for the whole facet pass, permanently.
+     *
+     * buildFacets calls matchesFilters once per axis, so with `mapArea` still
+     * applied every chip count would become viewport-relative — and
+     * FilterChipRow picks its four specialty shortcuts from `facets.specialty`
+     * sorted by count, so those chips would reshuffle under the cursor as the
+     * user pans. Chip counts should describe the query, not the camera.
+     *
+     * Done by nulling the axis in the filters handed to buildFacets rather than
+     * by threading an extra skip through facets.ts; matchesFilters' widened
+     * `skip` supports either, and this keeps the facet module untouched.
+     */
+    const facetFilters = useMemo(() => ({ ...filters, mapArea: null }), [filters]);
+
     const facets = useMemo(
-        () => buildFacets(allProviders, filters, facetCtx),
-        [allProviders, filters, facetCtx],
+        () => buildFacets(allProviders, facetFilters, facetCtx),
+        [allProviders, facetFilters, facetCtx],
     );
 
     return {

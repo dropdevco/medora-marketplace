@@ -21,6 +21,7 @@ export function InquiryModal({ onClose, plan }: InquiryModalProps) {
     const { t, i18n } = useTranslation();
     const [submitting, setSubmitting] = useState(false);
     const [result, setResult] = useState<InquiryResult | null>(null);
+    const [citySelect, setCitySelect] = useState('');
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -43,7 +44,9 @@ export function InquiryModal({ onClose, plan }: InquiryModalProps) {
             email: String(data.get('email') ?? '').trim(),
             phone: String(data.get('phone') ?? '').trim() || undefined,
             specialty: String(data.get('specialty') ?? '') || undefined,
-            city: String(data.get('city') ?? '') || undefined,
+            city: citySelect === 'Other'
+                ? String(data.get('cityOther') ?? '').trim() || undefined
+                : String(data.get('city') ?? '') || undefined,
             message: String(data.get('message') ?? '').trim() || undefined,
             locale: i18n.language,
             plan,
@@ -155,13 +158,27 @@ export function InquiryModal({ onClose, plan }: InquiryModalProps) {
 
                             <label style={labelStyle}>
                                 {t('sales.formCity')}
-                                <select name="city" style={inputStyle} defaultValue="">
+                                <select
+                                    name="city"
+                                    style={inputStyle}
+                                    value={citySelect}
+                                    onChange={(e) => setCitySelect(e.target.value)}
+                                >
                                     <option value="">{t('sales.formSelect')}</option>
                                     <option value="El Paso">El Paso, TX</option>
                                     <option value="Ciudad Juarez">Ciudad Juárez, CHIH</option>
                                     <option value="Other">{t('sales.formOther')}</option>
                                 </select>
                             </label>
+
+                            {citySelect === 'Other' && (
+                                <Field
+                                    name="cityOther"
+                                    label={t('sales.formCityOtherLabel')}
+                                    placeholder={t('sales.formCityOtherPlaceholder')}
+                                    required
+                                />
+                            )}
                         </div>
 
                         <label style={{ ...labelStyle, marginTop: '0.9rem' }}>
@@ -240,8 +257,8 @@ const inputStyle: React.CSSProperties = {
     width: '100%',
 };
 
-function Field({ name, label, type = 'text', required = false }: {
-    name: string; label: string; type?: string; required?: boolean;
+function Field({ name, label, type = 'text', required = false, placeholder }: {
+    name: string; label: string; type?: string; required?: boolean; placeholder?: string;
 }) {
     return (
         <label style={labelStyle}>
@@ -249,7 +266,7 @@ function Field({ name, label, type = 'text', required = false }: {
                 {label}
                 {required && <span style={{ color: 'var(--gold)' }}> *</span>}
             </span>
-            <input name={name} type={type} required={required} style={inputStyle} />
+            <input name={name} type={type} required={required} placeholder={placeholder} style={inputStyle} />
         </label>
     );
 }
