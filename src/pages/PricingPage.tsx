@@ -12,6 +12,23 @@ import {
     IconUS, IconMX, IconShield, IconLanguage,
 } from '../components/icons/Icons';
 
+/**
+ * The services sold alongside a listing.
+ *
+ * Copy lives in the locale files under `pricing.addon.<key>`; only the key and
+ * the icon live here, so adding a service is a translation change plus one row
+ * rather than a new block of JSX. Order is deliberate: the two that convert a
+ * listing into bookings come first, because they are what a clinic is actually
+ * trying to buy when it asks what a listing costs.
+ */
+const ADDONS = [
+    { key: 'whatsapp', icon: <IconClipboard size={19} weight={1.8} /> },
+    { key: 'payments', icon: <IconChart size={19} weight={1.8} /> },
+    { key: 'website', icon: <IconMapPlane size={19} weight={1.8} /> },
+    { key: 'reminders', icon: <IconViews size={19} weight={1.8} /> },
+    { key: 'seo', icon: <IconStar size={19} weight={1.8} /> },
+] as const;
+
 interface Stats { providers: number; avgRating: string; clicks: number; specialties: number }
 
 function computeStats(list: Provider[]): Stats {
@@ -25,7 +42,7 @@ function computeStats(list: Provider[]): Stats {
     };
 }
 
-export function SalesPage() {
+export function PricingPage() {
     const { t } = useTranslation();
     const [modalPlan, setModalPlan] = useState<string | null>(null);
 
@@ -236,41 +253,81 @@ export function SalesPage() {
                         <div
                             style={{
                                 display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
                                 gap: '1.35rem',
                             }}
                         >
                             <PricingCard
-                                tier={t('sales.freeTier')}
+                                tier={t('pricing.basicTier')}
                                 price="$0"
-                                period={t('sales.freePeriod')}
-                                features={[t('sales.freeF1'), t('sales.freeF2'), t('sales.freeF3'), t('sales.freeF4')]}
-                                ctaLabel={t('sales.freeCta')}
+                                period={t('pricing.basicPeriod')}
+                                features={[t('pricing.basicF1'), t('pricing.basicF2'), t('pricing.basicF3'), t('pricing.basicF4')]}
+                                ctaLabel={t('pricing.basicCta')}
                                 onCta={() => openForm('free')}
                             />
                             <PricingCard
                                 featured
-                                tier={t('sales.proTier')}
+                                tier={t('pricing.promotedTier')}
                                 price="$49"
-                                period={t('sales.proPeriod')}
-                                badge={t('sales.proBadge')}
-                                features={[t('sales.proF1'), t('sales.proF2'), t('sales.proF3'), t('sales.proF4'), t('sales.proF5')]}
-                                ctaLabel={t('sales.proCta')}
+                                period={t('pricing.perMonth')}
+                                note={t('pricing.promotedMxn')}
+                                badge={t('pricing.promotedBadge')}
+                                features={[t('pricing.promotedF1'), t('pricing.promotedF2'), t('pricing.promotedF3'), t('pricing.promotedF4')]}
+                                ctaLabel={t('pricing.promotedCta')}
                                 onCta={() => openForm('promoted')}
+                            />
+                            <PricingCard
+                                tier={t('pricing.featuredTier')}
+                                price="$99"
+                                period={t('pricing.perMonth')}
+                                note={t('pricing.featuredMxn')}
+                                features={[t('pricing.featuredF1'), t('pricing.featuredF2'), t('pricing.featuredF3'), t('pricing.featuredF4')]}
+                                ctaLabel={t('pricing.featuredCta')}
+                                onCta={() => openForm('featured')}
                             />
                         </div>
 
                         <p style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.9rem', color: 'var(--gray-400)' }}>
-                            {t('sales.pricingCompare')}{' '}
-                            <a
-                                href="https://pricing.medsociety.one/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ color: 'var(--gold)', fontWeight: 700, textDecoration: 'underline' }}
-                            >
-                                {t('sales.pricingCta')}
-                            </a>
+                            {t('pricing.terms')}
                         </p>
+                    </div>
+                </Reveal>
+            </section>
+
+            {/* == Add-ons ============================================
+                Everything above is placement. This is the work, and it is
+                where most of the revenue actually is, so it gets a section
+                rather than a footnote. Priced "from": every one of these is
+                scoped per clinic.
+                ======================================================= */}
+            <section style={{ padding: '0 1.5rem 6.5rem' }}>
+                <Reveal>
+                    <div style={{ maxWidth: 880, margin: '0 auto' }}>
+                        <SectionHead
+                            eyebrow={t('pricing.addonsEyebrow')}
+                            title={t('pricing.addonsTitle')}
+                            body={t('pricing.addonsSubtitle')}
+                        />
+
+                        <div
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                                gap: '1rem',
+                            }}
+                        >
+                            {ADDONS.map((addon) => (
+                                <AddonCard
+                                    key={addon.key}
+                                    icon={addon.icon}
+                                    title={t('pricing.addon.' + addon.key + '.title')}
+                                    price={t('pricing.addon.' + addon.key + '.price')}
+                                    body={t('pricing.addon.' + addon.key + '.body')}
+                                    ctaLabel={t('pricing.addonCta')}
+                                    onCta={() => openForm('addon-' + addon.key)}
+                                />
+                            ))}
+                        </div>
                     </div>
                 </Reveal>
             </section>
@@ -540,8 +597,54 @@ function CityCard({ icon, accent, city, region, body }: {
     );
 }
 
-function PricingCard({ tier, price, period, badge, features, featured = false, ctaLabel, onCta }: {
-    tier: string; price: string; period: string; badge?: string;
+function AddonCard({ icon, title, price, body, ctaLabel, onCta }: {
+    icon: React.ReactNode; title: string; price: string; body: string;
+    ctaLabel: string; onCta: () => void;
+}) {
+    return (
+        <div
+            style={{
+                padding: '1.5rem',
+                borderRadius: 'var(--radius)',
+                background: 'var(--navy-800)',
+                border: '1px solid var(--border)',
+                display: 'flex', flexDirection: 'column', gap: '0.7rem',
+            }}
+        >
+            <span
+                style={{
+                    width: 38, height: 38, borderRadius: 11,
+                    background: 'var(--gold-dim)', color: 'var(--gold)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+            >
+                {icon}
+            </span>
+
+            <h3 style={{ fontSize: '1.02rem', fontWeight: 800, lineHeight: 1.3 }}>{title}</h3>
+            <p style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--gold)' }}>{price}</p>
+            <p style={{ fontSize: '0.88rem', color: 'var(--gray-400)', lineHeight: 1.6, flex: 1 }}>{body}</p>
+
+            <button
+                onClick={onCta}
+                className="press"
+                style={{
+                    alignSelf: 'flex-start',
+                    display: 'flex', alignItems: 'center', gap: '0.4rem',
+                    background: 'none', color: 'var(--white)',
+                    fontWeight: 700, fontSize: '0.86rem',
+                    padding: '0.3rem 0',
+                }}
+            >
+                {ctaLabel}
+                <span className="cta-arrow" style={{ display: 'flex' }}><IconArrowRight size={15} weight={2} /></span>
+            </button>
+        </div>
+    );
+}
+
+function PricingCard({ tier, price, period, note, badge, features, featured = false, ctaLabel, onCta }: {
+    tier: string; price: string; period: string; note?: string; badge?: string;
     features: string[]; featured?: boolean; ctaLabel: string; onCta: () => void;
 }) {
     return (
@@ -587,6 +690,11 @@ function PricingCard({ tier, price, period, badge, features, featured = false, c
                     <span className="display" style={{ fontSize: '3.2rem' }}>{price}</span>
                     <span style={{ fontSize: '0.92rem', opacity: 0.75 }}>{period}</span>
                 </div>
+                {/* Half the audience budgets in pesos. Quoting only USD makes
+                    them do the conversion before they can judge the price. */}
+                {note && (
+                    <p style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '0.35rem' }}>{note}</p>
+                )}
             </div>
 
             <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', listStyle: 'none', flex: 1 }}>

@@ -5,7 +5,8 @@
     "toggleTheme": "Cambiar tema",
     "switchToSpanish": "Cambiar a Español",
     "switchToEnglish": "Switch to English",
-    "languageGroup": "Idioma"
+    "languageGroup": "Idioma",
+    "listYourClinic": "Registra tu clínica"
   },
   "search": {
     "placeholder": "Busca médicos, especialidades, servicios o código postal",
@@ -258,5 +259,62 @@
     "mentalHealth": "Psicólogos y psiquiatras",
     "pediatrics": "Pediatras para toda la familia",
     "aestheticJuarez": "Cirugía plástica en Ciudad Juárez"
+  },
+  "pricing": {
+    "basicTier": "Básico",
+    "basicPeriod": "gratis, siempre",
+    "basicF1": "Perfil en el directorio y en el mapa",
+    "basicF2": "Reclama y administra tu propio perfil",
+    "basicF3": "Te encuentran pacientes de ambos lados de la frontera",
+    "basicF4": "Botón de WhatsApp en tu perfil",
+    "basicCta": "Empieza gratis",
+    "perMonth": "/mes",
+    "promotedTier": "Promovido",
+    "promotedMxn": "aprox. $850 MXN",
+    "promotedBadge": "El más elegido",
+    "promotedF1": "Todo lo de Básico",
+    "promotedF2": "Pin promovido en el mapa y prioridad en las búsquedas",
+    "promotedF3": "Incluido en el boletín semanal para pacientes",
+    "promotedF4": "Reporte mensual de vistas y contactos",
+    "promotedCta": "Quiero promoverme",
+    "featuredTier": "Destacado",
+    "featuredMxn": "aprox. $1,700 MXN",
+    "featuredF1": "Todo lo de Promovido",
+    "featuredF2": "Primer lugar en tu categoría",
+    "featuredF3": "Panel de analíticas completo",
+    "featuredF4": "Auditoría trimestral de SEO y visibilidad en IA, más soporte prioritario",
+    "featuredCta": "Hablemos",
+    "terms": "Sin cuota de instalación, sin contrato, cancela cuando quieras.",
+    "addonsEyebrow": "Servicios adicionales",
+    "addonsTitle": "Llena la agenda, no solo el perfil",
+    "addonsSubtitle": "Que te encuentren es la primera mitad. Estos son los servicios que convierten una visita al perfil en una cita que llega y que paga.",
+    "addonCta": "Quiero saber más",
+    "addon": {
+      "whatsapp": {
+        "title": "WhatsApp y chat con IA",
+        "price": "desde $250 de instalación",
+        "body": "Respuestas automáticas, agenda en línea y mensajes repartidos de forma pareja entre tu personal. Pasa cualquier conversación a una persona cuando quieras."
+      },
+      "payments": {
+        "title": "Pagos en línea y links de prepago",
+        "price": "desde $350 de instalación",
+        "body": "Manda un link de pago por WhatsApp o SMS. Tarjetas y pagos digitales en USD y MXN, recibos automáticos y anticipos que evitan las citas perdidas."
+      },
+      "website": {
+        "title": "Sitio web profesional",
+        "price": "$500 pago único",
+        "body": "Un sitio pensado para celular con tus servicios, precios y agenda, tu perfil de Google Business configurado, y dominio y hosting administrados por nosotros."
+      },
+      "reminders": {
+        "title": "Recordatorios y campañas",
+        "price": "desde $99/mes",
+        "body": "Recordatorios de cita, hasta cuatro campañas al mes y reactivación de pacientes que no has visto en un tiempo. Los costos de mensajería van a precio de costo."
+      },
+      "seo": {
+        "title": "Auditoría de SEO y visibilidad en IA",
+        "price": "$300 pago único",
+        "body": "Dónde apareces en buscadores, mapas y asistentes de IA, cómo te comparas con las clínicas cerca de ti, y qué conviene arreglar primero. Incluida cada trimestre con Destacado."
+      }
+    }
   }
 }

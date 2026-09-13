@@ -49,8 +49,22 @@ export function Navbar() {
             <div className="ms-nav-controls" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                 <div className="ms-nav-links" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                     <NavLink to="/" label={t('nav.findProviders')} active={pathname === '/'} />
-                    <NavLink to="/sales" label={t('nav.forProviders')} active={pathname === '/sales'} />
                 </div>
+
+                {/*
+                  The clinic-facing page used to be a peer nav link, which made
+                  the one thing we want a clinic owner to do look like a second
+                  tab of the directory they were already reading. It is a call
+                  to action now, and it goes straight to what a listing costs
+                  rather than to a page about the idea of listing.
+                */}
+                <Link
+                    to="/pricing"
+                    className="ms-nav-cta press"
+                    aria-current={pathname === '/pricing' ? 'page' : undefined}
+                >
+                    {t('nav.listYourClinic')}
+                </Link>
 
                 {/*
                   Both languages stay on screen rather than showing only the

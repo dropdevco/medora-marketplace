@@ -1329,3 +1329,26 @@ select option {
 /* Google's photographer attribution arrives as its own anchor markup; on the
    dark lightbox scrim the default link colour is unreadable. */
 .ms-photo-credit a { color: rgba(255, 255, 255, 0.82); text-decoration: underline; }
+
+
+/* The one CTA in the nav. Filled, so it reads as an action rather than as a
+   third tab of the directory. */
+.ms-nav-cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1.05rem;
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+  color: var(--on-brand);
+  font-size: 0.86rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: opacity 0.18s var(--ease-out);
+}
+.ms-nav-cta:hover { opacity: 0.86; }
+
+/* Under ~560px the nav is logo + language + theme and nothing else fits; the
+   pricing page is still reachable from the footer and from every empty state. */
+@media (max-width: 560px) {
+  .ms-nav-cta { display: none; }
+}

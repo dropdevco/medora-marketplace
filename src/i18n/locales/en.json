@@ -5,7 +5,8 @@
     "toggleTheme": "Toggle theme",
     "switchToSpanish": "Cambiar a Español",
     "switchToEnglish": "Switch to English",
-    "languageGroup": "Language"
+    "languageGroup": "Language",
+    "listYourClinic": "List your clinic"
   },
   "search": {
     "placeholder": "Search doctors, specialties, services or ZIP",
@@ -258,5 +259,62 @@
     "mentalHealth": "Therapists and psychiatrists",
     "pediatrics": "Pediatricians for the whole family",
     "aestheticJuarez": "Plastic surgery in Ciudad Juárez"
+  },
+  "pricing": {
+    "basicTier": "Básico",
+    "basicPeriod": "free, forever",
+    "basicF1": "Profile in the directory and on the map",
+    "basicF2": "Claim and manage your own listing",
+    "basicF3": "Found by patients on both sides of the border",
+    "basicF4": "WhatsApp button on your profile",
+    "basicCta": "Start free",
+    "perMonth": "/month",
+    "promotedTier": "Promovido",
+    "promotedMxn": "about $850 MXN",
+    "promotedBadge": "Most popular",
+    "promotedF1": "Everything in Básico",
+    "promotedF2": "Promoted pin on the map and priority in search",
+    "promotedF3": "Included in the weekly patient newsletter",
+    "promotedF4": "Monthly report of profile views and contacts",
+    "promotedCta": "Get promoted",
+    "featuredTier": "Destacado",
+    "featuredMxn": "about $1,700 MXN",
+    "featuredF1": "Everything in Promovido",
+    "featuredF2": "First position in your category",
+    "featuredF3": "Full analytics dashboard",
+    "featuredF4": "Quarterly SEO and AI visibility audit, plus priority support",
+    "featuredCta": "Talk to us",
+    "terms": "No setup fee, no contract, cancel whenever you want.",
+    "addonsEyebrow": "Add-ons",
+    "addonsTitle": "Fill the schedule, not just the listing",
+    "addonsSubtitle": "Being found is the first half. These are the services that turn a profile view into an appointment that shows up and pays.",
+    "addonCta": "Ask about this",
+    "addon": {
+      "whatsapp": {
+        "title": "WhatsApp and AI chat",
+        "price": "from $250 setup",
+        "body": "Automatic replies, online booking, and messages shared fairly across your staff. Hand any conversation to a person at any point."
+      },
+      "payments": {
+        "title": "Online payments and prepay links",
+        "price": "from $350 setup",
+        "body": "Send a payment link over WhatsApp or SMS. Cards and digital wallets in USD and MXN, automatic receipts, and deposits that stop no-shows."
+      },
+      "website": {
+        "title": "Professional website",
+        "price": "$500 one-time",
+        "body": "A mobile-first site with your services, prices and booking, your Google Business profile set up, and domain and hosting managed for you."
+      },
+      "reminders": {
+        "title": "Reminders and campaigns",
+        "price": "from $99/month",
+        "body": "Appointment reminders, up to four campaigns a month, and reactivation for patients you have not seen in a while. Messaging fees at cost."
+      },
+      "seo": {
+        "title": "SEO and AI visibility audit",
+        "price": "$300 one-time",
+        "body": "Where you show up in search, maps and AI assistants, how you compare with the clinics near you, and what to fix first. Included quarterly with Destacado."
+      }
+    }
   }
 }
