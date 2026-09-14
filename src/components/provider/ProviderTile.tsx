@@ -3,7 +3,7 @@ import type { Provider } from '../../types/provider';
 import { ratingOf } from '../../utils/rating';
 import { hueOf } from '../../utils/images';
 import { usePortraitPhoto } from '../../hooks/usePortraitPhoto';
-import { IconStar, IconVerified, IconClipboard, SpecialtyIcon } from '../icons/Icons';
+import { IconStar, IconClipboard, SpecialtyIcon } from '../icons/Icons';
 
 interface ProviderTileProps {
     provider: Provider;
@@ -82,25 +82,14 @@ export function ProviderTile({ provider, onClick }: ProviderTileProps) {
                     </span>
                 )}
 
-                {/* A tile has room for one corner mark. The plan outranks the
-                    licence: Verified is what a listing buys, and showing the
-                    credential in the same slot is what made the two look like
-                    the same thing. */}
-                {(provider.verified || provider.licensed) && !provider.promoted && (
-                    <span
-                        title={provider.verified ? t('drawer.verified') : t('drawer.licensed')}
-                        style={{
-                            position: 'absolute', top: 10, left: 10,
-                            width: 26, height: 26, borderRadius: '50%',
-                            background: 'var(--navy-800)',
-                            color: provider.verified ? 'var(--gold)' : 'var(--gray-400)',
-                            border: '1px solid var(--border)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}
-                    >
-                        <IconVerified size={14} weight={2.2} />
-                    </span>
-                )}
+                {/*
+                  No verified/licensed mark on the photo itself. Verified is a
+                  paid feature — stamping it on the cover for free, in the one
+                  slot everyone sees before they read a word of text, gave
+                  away the thing a plan is meant to buy. The same fact still
+                  shows as a text badge on the card and the drawer; it just
+                  doesn't ride on the image here.
+                */}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.18rem', minWidth: 0 }}>
