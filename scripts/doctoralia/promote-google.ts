@@ -204,7 +204,9 @@ async function run() {
       phone: g.phone,
       website: g.website,
       email: null,
-      languages: ['es', 'en'],
+      // Not a scraped fact — see migration 0004. Left empty until a clinic
+      // states it through its own dashboard, or curation sets it by hand.
+      languages: [],
       promoted: false,
       verified: false,
       source: 'google',

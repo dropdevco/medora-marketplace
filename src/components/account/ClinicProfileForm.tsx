@@ -32,12 +32,21 @@ export function ClinicProfileForm({ clinic, onSaved }: {
         address: clinic.address ?? '',
         description: (clinic as Provider & { description?: string }).description ?? '',
     }));
+    // Its own piece of state rather than folded into `draft`: every other
+    // field is a string an <input> hands back directly, and forcing an array
+    // through that shape would cost more than it saves for one field.
+    const [languages, setLanguages] = useState<string[]>(clinic.languages ?? []);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
 
     const set = (key: Editable, value: string) => {
         setDraft((d) => ({ ...d, [key]: value }));
+        setSaved(false);
+    };
+
+    const toggleLanguage = (code: string) => {
+        setLanguages((prev) => (prev.includes(code) ? prev.filter((l) => l !== code) : [...prev, code]));
         setSaved(false);
     };
 
@@ -52,9 +61,17 @@ export function ClinicProfileForm({ clinic, onSaved }: {
         // reads as absent everywhere else in the app — `provider.phone && ...`
         // is the idiom throughout, and "" would pass a truthiness check it
         // should fail and render an empty contact row.
-        const patch: Record<string, string | null> = {};
+        const patch: Record<string, string | null | string[]> = {};
         for (const key of EDITABLE) patch[key] = draft[key].trim() || null;
         patch.updated_at = new Date().toISOString();
+        // Always sent, even unchanged: this is the one column the database
+        // itself watches (see migration 0004's trigger) — an UPDATE that
+        // carries the same array it already had still counts as "distinct
+        // from old" only when it actually differs, so saving the rest of the
+        // form back-to-back without touching languages does not spuriously
+        // re-confirm anything, and touching it here is what lets a clinic
+        // that starts unconfirmed become confirmed in the first place.
+        patch.languages = languages;
 
         const { error: err } = await supabase
             .from('providers')
@@ -97,6 +114,29 @@ export function ClinicProfileForm({ clinic, onSaved }: {
                     value={draft.description}
                     onChange={(e) => set('description', e.target.value)}
                 />
+            </Field>
+
+            {/*
+              This is the only real source of language data in the whole
+              directory — every listing that hasn't claimed itself yet shows
+              "not specified" rather than a guess, because nothing upstream of
+              here has ever actually asked a clinic what it speaks. Checking a
+              box is what turns that into a fact a patient can filter on.
+            */}
+            <Field label={t('account.fieldLanguages')} hint={t('account.fieldLanguagesHint')}>
+                <div style={{ display: 'flex', gap: '1.2rem', paddingTop: '0.2rem' }}>
+                    {(['es', 'en'] as const).map((code) => (
+                        <label key={code} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.92rem', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={languages.includes(code)}
+                                onChange={() => toggleLanguage(code)}
+                                style={{ width: 'auto' }}
+                            />
+                            {code === 'en' ? t('drawer.languageEN') : t('drawer.languageES')}
+                        </label>
+                    ))}
+                </div>
             </Field>
 
             {error && (

@@ -40,6 +40,14 @@ export const SpecialtyLabels: Record<Specialty, string> = {
 /** One published service, as scraped from a Doctoralia profile. */
 export interface ProviderService {
   name: string;
+  /**
+   * Machine translation of `name`, written by
+   * scripts/doctoralia/translate-services.ts. Absent until that batch has
+   * reached this service, or if the service was never in Spanish to begin
+   * with — a UI that wants English shows this when present and `name`
+   * otherwise, never the other way around.
+   */
+  nameEn?: string;
   slug?: string;
   /** Verbatim, e.g. '$1,500' or 'Desde $1,000'. Null when unpriced. */
   priceText?: string;
@@ -63,7 +71,17 @@ export interface Provider {
   phone?: string;
   website?: string;
   email?: string;
+  /**
+   * Empty until a clinic (or, before then, curation) states this directly.
+   * It used to be fabricated at ingest — every one of the 3 ingestion paths
+   * guessed `['es','en']` or `['en','es']` with zero real signal behind it,
+   * which is why 100% of the directory looked bilingual. `languagesConfirmed`
+   * is what tells a real answer apart from that old default ever having been
+   * anything but empty for an unclaimed listing.
+   */
   languages: string[];
+  /** True once `languages` has been set by an owner (or by us) rather than guessed. */
+  languagesConfirmed: boolean;
   promoted: boolean;
   /**
    * Paid placement. Derived from `tier`, never set on its own — the gold

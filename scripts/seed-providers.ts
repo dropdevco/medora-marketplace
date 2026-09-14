@@ -225,7 +225,11 @@ async function runSeeder() {
           phone: details.international_phone_number || null,
           website: details.website || null,
           email: email,
-          languages: country === 'MX' ? ['es', 'en'] : ['en', 'es'], // guess languages based on country
+          // Not a fact Google Places carries, and guessing by country is how
+          // 100% of this directory ended up claiming to be bilingual with
+          // zero real signal behind it. Left empty until a clinic states it
+          // through its own dashboard — see migration 0004.
+          languages: [],
           promoted: false,
           verified: false,
           source: 'google',

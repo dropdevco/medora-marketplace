@@ -22,6 +22,7 @@ export function normalizeProvider(row: any): Provider {
         featuredRank:  row.featuredRank  ?? row.featuredrank  ?? undefined,
         tier:          row.tier ?? 'basic',
         licensed:      row.licensed ?? false,
+        languagesConfirmed: row.languagesConfirmed ?? row.languagesconfirmed ?? false,
         // Trimmed here, once, so the insurance facet groups "GNP " with "GNP"
         // instead of offering both as separate options.
         insurances: (row.insurances ?? [])

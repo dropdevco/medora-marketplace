@@ -269,7 +269,11 @@ export function parseProfile(html: string, entry: IndexEntry): DoctoraliaProfile
     reviews: extractReviews(physician),
     insurances,
     addresses,
-    languages: ['es'], // Doctoralia MX does not publish spoken languages
+    // Doctoralia MX does not publish spoken languages. Defaulting to ['es']
+    // here still asserted a fact nobody stated — checked against the scraped
+    // `about` text, only 8 of 2,794 profiles even mention a language at all.
+    // Left empty until a clinic confirms it through its own dashboard.
+    languages: [],
     scrapedAt: new Date().toISOString(),
     missing,
   };

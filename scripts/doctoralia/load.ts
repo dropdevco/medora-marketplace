@@ -475,7 +475,9 @@ async function promote() {
       phone: p.addresses.find((a) => a.phone)?.phone ?? (isEntityMatch ? row.google_phone : null),
       website: p.website ?? (isEntityMatch ? row.google_website : null),
       email: null,
-      languages: ['es', 'en'],
+      // Not a scraped fact — see migration 0004. Left empty until a clinic
+      // states it through its own dashboard, or curation sets it by hand.
+      languages: [],
       promoted: false,
       verified: p.cedulas.length > 0,
       source: 'doctoralia',

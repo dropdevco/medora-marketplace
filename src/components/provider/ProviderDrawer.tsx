@@ -207,11 +207,25 @@ export function ProviderDrawer({ provider, onClose }: ProviderDrawerProps) {
                         {provider.phone && (
                             <DetailRow icon={<IconPhone size={17} />} text={provider.phone} href={`tel:${provider.phone}`} />
                         )}
+                        {/*
+                          Empty is now the common case — languages is only
+                          ever populated once a clinic states it through its
+                          own dashboard (see migration 0004), and most
+                          listings haven't been claimed yet. Saying so plainly
+                          rather than rendering a blank line is the point: the
+                          review that asked for this called it out as
+                          "really key when reaching out to a doctor", and a
+                          silent gap reads as "nobody bothered to check"
+                          rather than "we genuinely don't know yet".
+                        */}
                         <DetailRow
                             icon={<IconLanguage size={17} />}
-                            text={provider.languages
-                                .map((l) => (l === 'en' ? t('drawer.languageEN') : t('drawer.languageES')))
-                                .join(' · ')}
+                            text={provider.languages.length > 0
+                                ? provider.languages
+                                    .map((l) => (l === 'en' ? t('drawer.languageEN') : t('drawer.languageES')))
+                                    .join(' · ')
+                                : t('drawer.languageUnknown')}
+                            muted={provider.languages.length === 0}
                         />
                     </div>
 
@@ -320,14 +334,17 @@ function StatBox({ icon, value, label }: { icon: React.ReactNode; value: string;
     );
 }
 
-function DetailRow({ icon, text, href }: { icon: React.ReactNode; text: string; href?: string }) {
+function DetailRow({ icon, text, href, muted = false }: {
+    icon: React.ReactNode; text: string; href?: string; muted?: boolean;
+}) {
     const content = (
         <div
             style={{
                 display: 'flex', alignItems: 'flex-start', gap: '0.65rem',
                 fontSize: '0.9rem', lineHeight: 1.5,
-                color: href ? 'var(--gold)' : 'var(--gray-300)',
+                color: href ? 'var(--gold)' : muted ? 'var(--gray-500)' : 'var(--gray-300)',
                 fontWeight: href ? 600 : 400,
+                fontStyle: muted ? 'italic' : 'normal',
             }}
         >
             <span style={{ flexShrink: 0, marginTop: 1, color: 'var(--gray-500)', display: 'flex' }}>{icon}</span>
