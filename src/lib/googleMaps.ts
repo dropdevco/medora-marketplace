@@ -18,6 +18,33 @@ import { setOptions } from '@googlemaps/js-api-loader';
  */
 export const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
 
+/**
+ * The language the Maps script itself boots in — this is what controls map
+ * tile labels (street names, city names). It has to be read straight from
+ * localStorage rather than from `i18n.language`: this module is a
+ * side-effect import that several hooks pull in before `src/i18n/index.ts`
+ * necessarily has, and the script tag this loader injects can only be told
+ * a language once, at this first load.
+ *
+ * Reviews don't depend on this — `useGoogleReviews` passes its own
+ * `language` on every request, which the legacy Places Details API honours
+ * per call. This constant only matters for the parts of the SDK (map tiles)
+ * that don't take a per-call override, so it degrades gracefully: it starts
+ * a session in whatever language the user was already in, and only a
+ * language switch mid-session (which nothing here reloads for) would leave
+ * map labels one step behind until the next full page load.
+ */
+function initialMapsLanguage(): string {
+    try {
+        const stored = localStorage.getItem('medsociety-language');
+        if (stored?.startsWith('es')) return 'es';
+        if (stored?.startsWith('en')) return 'en';
+    } catch {
+        // Private mode, or site data blocked. Fall through to the default.
+    }
+    return navigator.language?.startsWith('es') ? 'es' : 'en';
+}
+
 if (MAPS_API_KEY) {
-    setOptions({ key: MAPS_API_KEY, v: 'weekly' });
+    setOptions({ key: MAPS_API_KEY, v: 'weekly', language: initialMapsLanguage() });
 }

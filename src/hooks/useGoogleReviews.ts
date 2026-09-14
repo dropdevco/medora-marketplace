@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { importLibrary } from '@googlemaps/js-api-loader';
 // Side-effect import: configures the loader with our key. This worked
 // without it only because the map chunk happened to load first; nothing
@@ -41,14 +42,22 @@ const mockGoogleReviews: GoogleReview[] = [
 ];
 
 /**
- * Reviews already fetched this session, keyed by placeId.
+ * Reviews already fetched this session, keyed by `placeId:language`.
  *
  * Opening a provider fires a live Places round trip, which is most of the delay
  * when a drawer opens. Reviews change on the order of days, so re-fetching them
  * because a user reopened the same clinic is pure latency — and pure API spend.
  * The cache lives at module scope so it survives drawer unmount/remount.
+ *
+ * Language is part of the key, not an afterthought: the Places Details API
+ * machine-translates review text (and localises `relative_time_description`)
+ * to whatever `language` the request carries, so the same review comes back
+ * as different text depending on the site's selected language. Caching by
+ * placeId alone would have served an English visitor whatever language the
+ * first visitor of the session happened to open that clinic in.
  */
 const reviewCache = new Map<string, GoogleReview[]>();
+const cacheKey = (placeId: string, lang: string) => `${placeId}:${lang}`;
 
 /**
  * Fetches Google Place reviews for a given placeId using the Places Service.
@@ -57,10 +66,17 @@ const reviewCache = new Map<string, GoogleReview[]>();
  * Falls back to high-quality mock reviews when Google API is blocked or offline.
  */
 export function useGoogleReviews(placeId?: string) {
-    // Seed from cache during the first render so a revisited clinic paints its
-    // reviews immediately, with no loading flash.
+    const { i18n } = useTranslation();
+    // Places only ships English and Spanish translations to us; anything else
+    // the detector hands back (a browser locale, say) falls back to English
+    // rather than sending Google a language code it doesn't recognise.
+    const lang = i18n.language?.slice(0, 2) === 'es' ? 'es' : 'en';
+
+    // Seed from cache during the first render so a revisited clinic — in the
+    // language it was already viewed in — paints its reviews immediately,
+    // with no loading flash.
     const [reviews, setReviews] = useState<GoogleReview[]>(
-        () => (placeId && reviewCache.get(placeId)) || [],
+        () => (placeId && reviewCache.get(cacheKey(placeId, lang))) || [],
     );
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<string>('');
@@ -72,7 +88,8 @@ export function useGoogleReviews(placeId?: string) {
             return;
         }
 
-        const cached = reviewCache.get(placeId);
+        const key = cacheKey(placeId, lang);
+        const cached = reviewCache.get(key);
         if (cached) {
             setReviews(cached);
             setStatus('cache');
@@ -95,11 +112,21 @@ export function useGoogleReviews(placeId?: string) {
                 const service = new google.maps.places.PlacesService(dummyDiv);
 
                 service.getDetails(
-                    { placeId: placeId!, fields: ['reviews'] },
+                    {
+                        placeId: placeId!,
+                        fields: ['reviews'],
+                        // The Details API machine-translates review text (and
+                        // localises relative_time_description) to whatever
+                        // language is requested here — this is the actual fix
+                        // for "reviews stay in Spanish when the site is in
+                        // English", and it costs nothing extra: it rides on a
+                        // call we already make, no separate translation API.
+                        language: lang,
+                    },
                     (place, apiStatus) => {
                         if (cancelled) return;
 
-                        console.log(`[useGoogleReviews] placeId=${placeId} status=${apiStatus} reviews=${place?.reviews?.length ?? 0}`);
+                        console.log(`[useGoogleReviews] placeId=${placeId} lang=${lang} status=${apiStatus} reviews=${place?.reviews?.length ?? 0}`);
                         setStatus(apiStatus);
 
                         if (
@@ -119,7 +146,7 @@ export function useGoogleReviews(placeId?: string) {
                                     profile_photo_url:
                                         (r as any).profile_photo_url ?? undefined,
                                 }));
-                            reviewCache.set(placeId!, good);
+                            reviewCache.set(key, good);
                             setReviews(good);
                         } else {
                             // Fallback to mock reviews if API limits or billing blocks occur
@@ -127,7 +154,7 @@ export function useGoogleReviews(placeId?: string) {
                             // Cache the fallback as well: asking again this
                             // session cannot produce reviews that do not exist,
                             // and each attempt is a billable Places call.
-                            reviewCache.set(placeId!, mockGoogleReviews);
+                            reviewCache.set(key, mockGoogleReviews);
                             setReviews(mockGoogleReviews);
                         }
                         setLoading(false);
@@ -147,7 +174,7 @@ export function useGoogleReviews(placeId?: string) {
         fetchReviews();
 
         return () => { cancelled = true; };
-    }, [placeId]);
+    }, [placeId, lang]);
 
     return { reviews, loading, status };
 }
