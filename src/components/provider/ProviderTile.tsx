@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import type { Provider } from '../../types/provider';
 import { ratingOf } from '../../utils/rating';
-import { portraitUrl, hueOf } from '../../utils/images';
+import { hueOf } from '../../utils/images';
+import { usePortraitPhoto } from '../../hooks/usePortraitPhoto';
 import { IconStar, IconVerified, IconClipboard, SpecialtyIcon } from '../icons/Icons';
 
 interface ProviderTileProps {
@@ -21,7 +22,11 @@ interface ProviderTileProps {
 export function ProviderTile({ provider, onClick }: ProviderTileProps) {
     const rating = ratingOf(provider);
     const { t } = useTranslation();
-    const photo = portraitUrl(provider.imageUrl);
+    // Falls back to a live Google Places photo when there is no usable
+    // `imageUrl` — see usePortraitPhoto. Without it, a tile in the Discover
+    // rows showed the specialty monogram for a clinic whose own drawer
+    // already had a real photo.
+    const { url: photo } = usePortraitPhoto(provider);
     const accent = provider.country === 'MX' ? 'var(--mx)' : 'var(--us)';
     const side = provider.country === 'MX' ? t('drawer.ciudadJuarez') : t('drawer.elPaso');
 

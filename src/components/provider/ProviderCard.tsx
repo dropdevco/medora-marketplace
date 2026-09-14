@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Provider } from '../../types/provider';
-import { portraitUrl, hueOf } from '../../utils/images';
+import { hueOf } from '../../utils/images';
+import { usePortraitPhoto } from '../../hooks/usePortraitPhoto';
 import { ratingOf, ratingSource } from '../../utils/rating';
 import {
     IconStar, IconMapPin, IconChevronRight, IconPromoted,
@@ -38,15 +39,23 @@ export function ProviderCard({ provider, selected, onClick, distance, onHover, f
      * because the monogram class was only applied on the no-photo branch. So
      * the cards most likely to be missing a picture were the ones that showed
      * nothing at all rather than the fallback built for exactly that case.
+     *
+     * The source itself now comes from usePortraitPhoto, which falls back to a
+     * live Google Places photo when there is no usable `imageUrl` — 1,275 of
+     * the 1,390 providers with a googlePlaceId are in exactly that spot, so
+     * without this a card showed the specialty icon for a clinic whose own
+     * drawer already had a real photo one click away.
      */
+    const { url: resolvedUrl } = usePortraitPhoto(provider);
     const [broken, setBroken] = useState(false);
-    const src = portraitUrl(provider.imageUrl);
-    const photo = broken ? undefined : src;
+    const photo = broken ? undefined : resolvedUrl;
 
-    // A new provider in a recycled card must not inherit the old one's failure.
-    const [seenSrc, setSeenSrc] = useState(src);
-    if (src !== seenSrc) {
-        setSeenSrc(src);
+    // A new provider in a recycled card must not inherit the old one's
+    // failure — and Google's photo resolving after mount is a *new* source,
+    // not a retry of a failed one, so it must get its own clean `broken` slate.
+    const [seenSrc, setSeenSrc] = useState(resolvedUrl);
+    if (resolvedUrl !== seenSrc) {
+        setSeenSrc(resolvedUrl);
         setBroken(false);
     }
 
