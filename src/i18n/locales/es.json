@@ -121,10 +121,13 @@
     "elPaso": "El Paso",
     "languageEN": "Inglés",
     "languageES": "Español",
+    "languageUnknown": "Idiomas: no especificado",
     "visitWebsite": "Visitar Sitio Web",
     "services": "Servicios y precios",
     "servicesMore": "+{{count}} más",
-    "servicePriceFrom": "desde {{price}}",
+    "servicePriceFrom": "desde {{price}} MXN",
+    "servicePrice": "{{price}} MXN",
+    "serviceFree": "Gratis",
     "serviceDisclaimer": "Los precios son los publicados por el proveedor y pueden haber cambiado. Confirma antes de agendar.",
     "licensed": "Cédula profesional",
     "reviewsOn": {
@@ -240,7 +243,7 @@
     "es": "Español"
   },
   "card": {
-    "priceFrom": "Desde {{price}}",
+    "priceFrom": "Desde {{price}} MXN",
     "unrated": "Nuevo · sin reseñas todavía",
     "new": "Nuevo",
     "reviewsFrom": {
@@ -378,6 +381,8 @@
     "fieldAddressHint": "Aparece en tu perfil. Cambiarla no mueve tu pin en el mapa.",
     "fieldDescription": "Sobre el consultorio",
     "fieldDescriptionHint": "Un párrafo corto que los pacientes leen antes de llamar. Qué atiendes, quién eres, qué esperar.",
+    "fieldLanguages": "Idiomas que se hablan en tu consultorio",
+    "fieldLanguagesHint": "Aparece en tu perfil, y los pacientes pueden filtrar por esto. Deja ambos sin marcar si prefieres no decirlo todavía.",
     "locationNote": "¿Necesitas mover tu pin en el mapa, cambiar tu especialidad o corregir tu calificación? Escribe a hello@medsociety.one — eso lo ajustamos nosotros para que ningún perfil se mueva de lugar por su cuenta.",
     "photosBody": "Las clínicas con fotos reales se abren mucho más que las que no tienen. Aparecen en tu perfil, y la primera es la portada.",
     "photoUpload": "Subir una foto",

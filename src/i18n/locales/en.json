@@ -121,10 +121,13 @@
     "elPaso": "El Paso",
     "languageEN": "English",
     "languageES": "Spanish",
+    "languageUnknown": "Languages spoken: not specified",
     "visitWebsite": "Visit Website",
     "services": "Services & prices",
     "servicesMore": "+{{count}} more",
-    "servicePriceFrom": "from {{price}}",
+    "servicePriceFrom": "from {{price}} MXN",
+    "servicePrice": "{{price}} MXN",
+    "serviceFree": "Free",
     "serviceDisclaimer": "Prices are as published by the provider and may have changed. Confirm before booking.",
     "licensed": "Cédula profesional",
     "reviewsOn": {
@@ -240,7 +243,7 @@
     "es": "Spanish"
   },
   "card": {
-    "priceFrom": "From {{price}}",
+    "priceFrom": "From {{price}} MXN",
     "unrated": "New · no reviews yet",
     "new": "New",
     "reviewsFrom": {
@@ -378,6 +381,8 @@
     "fieldAddressHint": "Shown on your listing. Changing it does not move your pin.",
     "fieldDescription": "About the practice",
     "fieldDescriptionHint": "A short paragraph patients read before they call. What you treat, who you are, what to expect.",
+    "fieldLanguages": "Languages spoken at your practice",
+    "fieldLanguagesHint": "Shown on your listing, and patients can filter by it. Leave both unchecked if you'd rather not say yet.",
     "locationNote": "Need to move your pin on the map, change your specialty, or correct your rating? Email hello@medsociety.one — those are set by us so a listing cannot quietly relocate itself.",
     "photosBody": "Clinics with real photos get opened far more often than ones without. These appear on your listing, and the first is the cover.",
     "photoUpload": "Upload a photo",

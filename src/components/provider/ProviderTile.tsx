@@ -152,7 +152,7 @@ export function ProviderTile({ provider, onClick }: ProviderTileProps) {
                             <span style={{ fontWeight: 700 }}>
                                 {t('card.priceFrom', {
                                     price: `$${provider.priceFromMxn.toLocaleString()}`,
-                                    defaultValue: `From $${provider.priceFromMxn.toLocaleString()}`,
+                                    defaultValue: `From $${provider.priceFromMxn.toLocaleString()} MXN`,
                                 })}
                             </span>
                         )}

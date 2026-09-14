@@ -219,7 +219,7 @@ export function ProviderCard({ provider, selected, onClick, distance, onHover, f
                             <Badge bg="var(--gold-dim)" fg="var(--gold)">
                                 {t('card.priceFrom', {
                                     price: `$${provider.priceFromMxn.toLocaleString()}`,
-                                    defaultValue: `From $${provider.priceFromMxn.toLocaleString()}`,
+                                    defaultValue: `From $${provider.priceFromMxn.toLocaleString()} MXN`,
                                 })}
                             </Badge>
                         )}

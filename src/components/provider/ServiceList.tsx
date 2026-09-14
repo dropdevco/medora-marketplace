@@ -14,8 +14,34 @@ const VISIBLE = 6;
  * around a number we showed them and then gets a different bill is a worse
  * outcome than one who never saw a number at all.
  */
+/**
+ * The price line for one service, in the site's language.
+ *
+ * `priceText` is scraped verbatim ("Desde $1,000") and was rendered as-is,
+ * which is why an English-language visitor still read the Spanish word
+ * "Desde" — it was never a UI string, so `t()` never touched it. The
+ * structured `priceMxn`/`isFrom` fields the backfill already parsed out of
+ * that same text are what let this be rebuilt through i18n instead: a plain
+ * amount, an "from X" wrapper, or "Free" for a zero price, all localised, all
+ * carrying the currency so a US reader isn't left guessing whether $1,000
+ * means pesos or dollars (every priced service in this directory is a
+ * Doctoralia listing, and Doctoralia MX only ever quotes MXN).
+ *
+ * Falls back to the raw scraped text only when `priceMxn` is null — a price
+ * string our parser found no number in at all, which real data shows as
+ * essentially never happening, but which cannot be safely rebuilt from
+ * fields that were never populated.
+ */
+function priceLabel(s: ProviderService, t: (key: string, opts?: Record<string, unknown>) => string): string | null {
+    if (!s.priceText) return null;
+    if (s.priceMxn == null) return s.priceText;
+    if (s.priceMxn === 0) return t('drawer.serviceFree');
+    const price = s.priceMxn.toLocaleString();
+    return s.isFrom ? t('drawer.servicePriceFrom', { price }) : t('drawer.servicePrice', { price });
+}
+
 export function ServiceList({ services }: { services: ProviderService[] }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [expanded, setExpanded] = useState(false);
 
     if (!services.length) return null;
@@ -47,14 +73,19 @@ export function ServiceList({ services }: { services: ProviderService[] }) {
                         }}
                     >
                         <span style={{ flex: 1, minWidth: 0, fontSize: '0.87rem', color: 'var(--text)' }}>
-                            {s.name}
+                            {/* nameEn exists only once the batch translation has
+                                reached this service — see scripts/doctoralia/
+                                translate-services.ts. Until then, or for a
+                                Spanish-language visitor, the clinic's own
+                                published name is exactly what should show. */}
+                            {i18n.language.startsWith('en') && s.nameEn ? s.nameEn : s.name}
                         </span>
-                        {s.priceText && (
+                        {priceLabel(s, t) && (
                             <span style={{
                                 fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap',
                                 color: s.priceMxn != null ? 'var(--white)' : 'var(--gray-500)',
                             }}>
-                                {s.priceText}
+                                {priceLabel(s, t)}
                             </span>
                         )}
                     </li>
