@@ -322,6 +322,7 @@ export function PricingPage() {
                                     icon={addon.icon}
                                     title={t('pricing.addon.' + addon.key + '.title')}
                                     price={t('pricing.addon.' + addon.key + '.price')}
+                                    priceMxn={t('pricing.addon.' + addon.key + '.priceMxn')}
                                     body={t('pricing.addon.' + addon.key + '.body')}
                                     ctaLabel={t('pricing.addonCta')}
                                     onCta={() => openForm('addon-' + addon.key)}
@@ -597,8 +598,8 @@ function CityCard({ icon, accent, city, region, body }: {
     );
 }
 
-function AddonCard({ icon, title, price, body, ctaLabel, onCta }: {
-    icon: React.ReactNode; title: string; price: string; body: string;
+function AddonCard({ icon, title, price, priceMxn, body, ctaLabel, onCta }: {
+    icon: React.ReactNode; title: string; price: string; priceMxn?: string; body: string;
     ctaLabel: string; onCta: () => void;
 }) {
     return (
@@ -622,7 +623,15 @@ function AddonCard({ icon, title, price, body, ctaLabel, onCta }: {
             </span>
 
             <h3 style={{ fontSize: '1.02rem', fontWeight: 800, lineHeight: 1.3 }}>{title}</h3>
-            <p style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--gold)' }}>{price}</p>
+            <div>
+                <p style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--gold)' }}>{price}</p>
+                {/* Same reasoning as the plan cards above: half the audience
+                    budgets in pesos, so the MXN figure rides along rather than
+                    making them convert it themselves. */}
+                {priceMxn && (
+                    <p style={{ fontSize: '0.76rem', color: 'var(--gray-500)', marginTop: '0.15rem' }}>{priceMxn}</p>
+                )}
+            </div>
             <p style={{ fontSize: '0.88rem', color: 'var(--gray-400)', lineHeight: 1.6, flex: 1 }}>{body}</p>
 
             <button

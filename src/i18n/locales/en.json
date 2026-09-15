@@ -298,27 +298,32 @@
     "addon": {
       "whatsapp": {
         "title": "WhatsApp and AI chat",
-        "price": "from $250 setup",
+        "price": "from $250 USD setup",
+        "priceMxn": "about $4,250 MXN",
         "body": "Automatic replies, online booking, and messages shared fairly across your staff. Hand any conversation to a person at any point."
       },
       "payments": {
         "title": "Online payments and prepay links",
-        "price": "from $350 setup",
+        "price": "from $350 USD setup",
+        "priceMxn": "about $5,950 MXN",
         "body": "Send a payment link over WhatsApp or SMS. Cards and digital wallets in USD and MXN, automatic receipts, and deposits that stop no-shows."
       },
       "website": {
         "title": "Professional website",
-        "price": "$500 one-time",
+        "price": "$500 USD one-time",
+        "priceMxn": "about $8,500 MXN",
         "body": "A mobile-first site with your services, prices and booking, your Google Business profile set up, and domain and hosting managed for you."
       },
       "reminders": {
         "title": "Reminders and campaigns",
-        "price": "from $99/month",
+        "price": "from $99 USD/month",
+        "priceMxn": "about $1,700 MXN/month",
         "body": "Appointment reminders, up to four campaigns a month, and reactivation for patients you have not seen in a while. Messaging fees at cost."
       },
       "seo": {
         "title": "SEO and AI visibility audit",
-        "price": "$300 one-time",
+        "price": "$300 USD one-time",
+        "priceMxn": "about $5,100 MXN",
         "body": "Where you show up in search, maps and AI assistants, how you compare with the clinics near you, and what to fix first. Included quarterly with Destacado."
       }
     }

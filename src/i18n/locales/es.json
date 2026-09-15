@@ -298,27 +298,32 @@
     "addon": {
       "whatsapp": {
         "title": "WhatsApp y chat con IA",
-        "price": "desde $250 de instalación",
+        "price": "desde $250 USD de instalación",
+        "priceMxn": "aprox. $4,250 MXN",
         "body": "Respuestas automáticas, agenda en línea y mensajes repartidos de forma pareja entre tu personal. Pasa cualquier conversación a una persona cuando quieras."
       },
       "payments": {
         "title": "Pagos en línea y links de prepago",
-        "price": "desde $350 de instalación",
+        "price": "desde $350 USD de instalación",
+        "priceMxn": "aprox. $5,950 MXN",
         "body": "Manda un link de pago por WhatsApp o SMS. Tarjetas y pagos digitales en USD y MXN, recibos automáticos y anticipos que evitan las citas perdidas."
       },
       "website": {
         "title": "Sitio web profesional",
-        "price": "$500 pago único",
+        "price": "$500 USD pago único",
+        "priceMxn": "aprox. $8,500 MXN",
         "body": "Un sitio pensado para celular con tus servicios, precios y agenda, tu perfil de Google Business configurado, y dominio y hosting administrados por nosotros."
       },
       "reminders": {
         "title": "Recordatorios y campañas",
-        "price": "desde $99/mes",
+        "price": "desde $99 USD/mes",
+        "priceMxn": "aprox. $1,700 MXN/mes",
         "body": "Recordatorios de cita, hasta cuatro campañas al mes y reactivación de pacientes que no has visto en un tiempo. Los costos de mensajería van a precio de costo."
       },
       "seo": {
         "title": "Auditoría de SEO y visibilidad en IA",
-        "price": "$300 pago único",
+        "price": "$300 USD pago único",
+        "priceMxn": "aprox. $5,100 MXN",
         "body": "Dónde apareces en buscadores, mapas y asistentes de IA, cómo te comparas con las clínicas cerca de ti, y qué conviene arreglar primero. Incluida cada trimestre con Destacado."
       }
     }
