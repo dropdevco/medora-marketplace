@@ -60,6 +60,13 @@ interface Candidate {
     titleKey: string;
     filters: Partial<ProviderFilters>;
     match: (p: Provider) => boolean;
+    /**
+     * Provider ids to force into the front of this row, in this order, ahead
+     * of `browseOrder`. Separate from `featuredRank` on purpose — that field
+     * is one sitewide list already spoken for by other clinics, while this is
+     * a per-row pick that has no business displacing them.
+     */
+    pinnedIds?: string[];
 }
 
 /**
@@ -73,6 +80,14 @@ const CANDIDATES: Candidate[] = [
         titleKey: 'discover.dentistsJuarez',
         filters: { specialty: ['dentist'], country: 'MX' },
         match: (p) => p.country === 'MX' && p.specialty.includes('dentist'),
+        // Picked by hand for their photos.
+        pinnedIds: [
+            '7942ede4-af3d-4ca4-9aff-43673c503f00', // Dra. Laura Karina Uribe Fentanes
+            '931ca3a3-0fe1-4521-8d52-c6820ccfda60', // Dra. Silma Chavez Rios
+            '0e25b2e4-fb3c-40ef-ab6f-0d2206153f63', // Dr. Ever Renteria Sepulveda
+            'b7275c56-7224-4bc3-ba46-c318fcaa95b3', // Dra. Patricia Cordova Samaniego
+            'd4ed6cd2-e898-4116-a5ca-c7a83471dc2a', // Dra. Nantli Vega Menchaca
+        ],
     },
     {
         id: 'primary-elpaso',
@@ -125,11 +140,18 @@ export function buildDiscoverRows(providers: readonly Provider[]): DiscoverRow[]
     for (const c of CANDIDATES) {
         const hits = providers.filter(c.match);
         if (hits.length < MIN_ROW) continue;
+
+        const pinned = (c.pinnedIds ?? [])
+            .map((id) => hits.find((p) => p.id === id))
+            .filter((p): p is Provider => p != null);
+        const pinnedIds = new Set(pinned.map((p) => p.id));
+        const rest = hits.filter((p) => !pinnedIds.has(p.id)).sort(browseOrder);
+
         rows.push({
             id: c.id,
             titleKey: c.titleKey,
             filters: c.filters,
-            providers: hits.sort(browseOrder).slice(0, ROW_SIZE),
+            providers: [...pinned, ...rest].slice(0, ROW_SIZE),
         });
     }
     return rows;
