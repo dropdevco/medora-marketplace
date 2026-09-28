@@ -80,13 +80,14 @@ const CANDIDATES: Candidate[] = [
         titleKey: 'discover.dentistsJuarez',
         filters: { specialty: ['dentist'], country: 'MX' },
         match: (p) => p.country === 'MX' && p.specialty.includes('dentist'),
-        // Picked by hand for their photos.
+        // Picked by hand for their photos; fills a large-monitor row.
         pinnedIds: [
             '7942ede4-af3d-4ca4-9aff-43673c503f00', // Dra. Laura Karina Uribe Fentanes
             '931ca3a3-0fe1-4521-8d52-c6820ccfda60', // Dra. Silma Chavez Rios
             '0e25b2e4-fb3c-40ef-ab6f-0d2206153f63', // Dr. Ever Renteria Sepulveda
             'b7275c56-7224-4bc3-ba46-c318fcaa95b3', // Dra. Patricia Cordova Samaniego
             'd4ed6cd2-e898-4116-a5ca-c7a83471dc2a', // Dra. Nantli Vega Menchaca
+            '0ba48af3-5071-43c6-9b69-d250bfc45ade', // Dra. Janeth Valenzuela
         ],
     },
     {
@@ -94,6 +95,15 @@ const CANDIDATES: Candidate[] = [
         titleKey: 'discover.primaryElPaso',
         filters: { specialty: ['general'], country: 'US' },
         match: (p) => p.country === 'US' && p.specialty.includes('general'),
+        // Picked by hand.
+        pinnedIds: [
+            '76601617-50bd-4998-8c4b-1f9040c13c09', // Premier Primary Care Clinic (George Dieter Dr)
+            'c63d8264-3664-4936-afbf-864b265c14db', // El Paso Primary Care
+            'd029f7b5-2e9a-49ca-a264-163b29db3332', // Village Medical - South Mesa Hills
+            'a5efd858-9ce1-42bf-b1a3-fa6f111dce05', // Essential Care Clinic LLC
+            'f9f9283f-bbce-4f4f-bee9-264405890fd2', // Madrid Family Care Clinic
+            '9f3ab02b-8730-4b9a-83df-31c07323deab', // Primary Care Complete
+        ],
     },
     {
         id: 'published-prices',

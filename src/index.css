@@ -489,8 +489,6 @@ select option {
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }
   .mobile-only { display: flex !important; }
-
-  .drawer-panel { width: 100% !important; max-width: 100% !important; }
 }
 
 /* ─── Elevating Cards ────────────────────────────────── */
@@ -1036,16 +1034,33 @@ select option {
   background: var(--surface);
 }
 
-/* Sits over the top edge of the map column, reporting that the pins are a
-   subset of the results. `pointer-events: none` because it must never be a
-   thing you have to move the cursor around to drag the map. */
-.ms-map-note {
+/* Top-center overlay stack, rendered by MapView: the "search as I move"
+   toggle and the pin-count status note share this single flex column instead
+   of each claiming `top: Npx; left: 50%` for itself, which is what used to
+   make them stack on top of one another. The container spans the width of
+   the map (minus side gutters) and is `pointer-events: none` so it never
+   competes with dragging the map; each child pill opts back into
+   pointer-events where it's actually interactive/readable. */
+.ms-map-overlay-top {
   position: absolute;
-  top: 0.6rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
-  max-width: calc(100% - 1.6rem);
+  top: 12px;
+  left: 0.8rem;
+  right: 0.8rem;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  pointer-events: none;
+}
+
+/* Reports that the pins are a subset of the results. Pure text, so it stays
+   `pointer-events: none` — nothing here is ever clickable. Positioning now
+   comes entirely from the `.ms-map-overlay-top` parent; this class only owns
+   the pill's look, and allows wrapping so long/translated copy doesn't get
+   clipped on narrow map widths. */
+.ms-map-note {
+  max-width: 100%;
   padding: 0.34rem 0.75rem;
   border-radius: var(--radius-pill);
   background: var(--navy-800);
@@ -1056,7 +1071,39 @@ select option {
   font-weight: 600;
   line-height: 1.3;
   text-align: center;
+  white-space: normal;
   pointer-events: none;
+}
+
+/* The "search as I move the map" pill. Lives in `.ms-map-overlay-top`
+   alongside `.ms-map-note`; it has a checkbox so it needs
+   `pointer-events: auto` even though its parent turns pointer events off.
+   `min-width: 0` plus the ellipsis rule on `.ms-map-follow-label` let the
+   pill shrink instead of overflowing the map when the pane is very narrow,
+   rather than overlapping the note below it or spilling past the map edge. */
+.ms-map-follow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-pill);
+  background: var(--navy-800);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  color: var(--white);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  pointer-events: auto;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ms-map-follow-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .ms-view-fab { display: none; }
@@ -1331,21 +1378,32 @@ select option {
 .ms-photo-credit a { color: rgba(255, 255, 255, 0.82); text-decoration: underline; }
 
 
-/* The one CTA in the nav. Filled, so it reads as an action rather than as a
-   third tab of the directory. */
+/* The one CTA in the nav. Toggles with Find providers: inactive by default,
+   highlighted only when on /pricing. */
 .ms-nav-cta {
   display: inline-flex;
   align-items: center;
-  padding: 0.5rem 1.05rem;
+  padding: 0.45rem 0.95rem;
   border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--gray-300);
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color 0.18s var(--ease-out), background 0.18s var(--ease-out);
+}
+.ms-nav-cta:hover {
+  color: var(--white);
+  background: var(--surface);
+}
+.ms-nav-cta[aria-current="page"] {
   background: var(--brand);
   color: var(--on-brand);
-  font-size: 0.86rem;
-  font-weight: 700;
-  white-space: nowrap;
-  transition: opacity 0.18s var(--ease-out);
 }
-.ms-nav-cta:hover { opacity: 0.86; }
+.ms-nav-cta[aria-current="page"]:hover {
+  opacity: 0.86;
+}
 
 /* Under ~560px the nav is logo + language + theme and nothing else fits; the
    pricing page is still reachable from the footer and from every empty state. */
@@ -1403,4 +1461,51 @@ select option {
 
 @media (max-width: 700px) {
   .ms-nav-account { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Provider page — the full-page replacement for the old drawer.
+   Two columns on desktop (details left, a sticky contact/map card
+   right); one column, no sidebar stickiness, under ~860px.
+   ═══════════════════════════════════════════════════════════════ */
+.ms-provider-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 2rem;
+  align-items: start;
+}
+
+.ms-provider-sidebar {
+  position: sticky;
+  top: calc(68px + 1.25rem);
+}
+
+@media (max-width: 860px) {
+  .ms-provider-layout {
+    grid-template-columns: 1fr;
+  }
+  .ms-provider-sidebar {
+    position: static;
+  }
+}
+
+/* ── Portrait fade-in ────────────────────────────────────────────
+   Applied to provider tile/card images. Starts transparent and
+   fades in on load, so a photo popping in over a slow connection
+   doesn't feel like a layout jolt; a cached image is unhidden
+   immediately via the ref callback that adds .is-loaded on mount,
+   not left waiting on a load event that won't fire again. */
+.ms-img-fade {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.ms-img-fade.is-loaded {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ms-img-fade {
+    transition: none;
+  }
 }

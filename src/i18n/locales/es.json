@@ -125,8 +125,8 @@
     "visitWebsite": "Visitar Sitio Web",
     "services": "Servicios y precios",
     "servicesMore": "+{{count}} más",
-    "servicePriceFrom": "desde {{price}} MXN",
-    "servicePrice": "{{price}} MXN",
+    "servicePriceFrom": "desde {{price}}",
+    "servicePrice": "{{price}}",
     "serviceFree": "Gratis",
     "serviceDisclaimer": "Los precios son los publicados por el proveedor y pueden haber cambiado. Confirma antes de agendar.",
     "licensed": "Cédula profesional",
@@ -172,8 +172,6 @@
     "trustBorder": "Los dos lados de la frontera",
     "statsProviders": "Clínicas listadas",
     "statsViews": "Vistas a perfiles",
-    "statsSpecialties": "Especialidades cubiertas",
-    "statsRating": "Calificación promedio",
     "statsCities": "Ciudades cubiertas",
     "howEyebrow": "Cómo empezar",
     "howTitle": "Tres pasos para tu primer paciente",
@@ -243,9 +241,10 @@
     "es": "Español"
   },
   "card": {
-    "priceFrom": "Desde {{price}} MXN",
+    "priceFrom": "Desde {{price}}",
     "unrated": "Nuevo · sin reseñas todavía",
     "new": "Nuevo",
+    "profileViews": "{{formatted}} vistas al perfil",
     "reviewsFrom": {
       "doctoralia": "({{formatted}} opiniones en Doctoralia)",
       "google": "({{formatted}} reseñas de Google)",
@@ -409,5 +408,18 @@
       "analytics": "Analíticas completas, medidas y no estimadas",
       "top": "Primer lugar en tu categoría"
     }
+  },
+  "providerPage": {
+    "backToResults": "Volver a resultados",
+    "backToDirectory": "Volver al directorio",
+    "notFoundTitle": "No encontramos ese perfil",
+    "notFoundBody": "Puede que se haya eliminado, o que el enlace esté desactualizado.",
+    "contact": "Contacto",
+    "website": "Visitar sitio web",
+    "getDirections": "Cómo llegar",
+    "pricesFrom": "Precios desde",
+    "mapAlt": "Mapa con la ubicación de {{name}}",
+    "pageTitle": "{{name}} — MedSociety",
+    "pageDescription": "{{name}} — {{specialty}} en {{city}}. Calificaciones, precios, seguros e información de contacto en MedSociety."
   }
 }

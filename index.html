@@ -13,6 +13,26 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
     <!--
+      Provider photo hosts and the Supabase API. The directory fetch and the
+      first tiles' images both start as soon as the app boots, so opening the
+      connection (DNS + TLS) ahead of the first real request removes that
+      round trip from the critical path instead of paying for it on demand.
+      Images are loaded no-cors, so `crossorigin` is omitted for them —
+      adding it would open a second, unused connection. Supabase is fetched
+      with CORS, so it needs `crossorigin` for the preconnected socket to be
+      reusable. dns-prefetch is the same idea for browsers that don't support
+      preconnect.
+    -->
+    <link rel="preconnect" href="https://s3.us-east-1.amazonaws.com" />
+    <link rel="dns-prefetch" href="https://s3.us-east-1.amazonaws.com" />
+    <link rel="preconnect" href="https://pixel-p3.s3.us-east-1.amazonaws.com" />
+    <link rel="dns-prefetch" href="https://pixel-p3.s3.us-east-1.amazonaws.com" />
+    <link rel="preconnect" href="https://lh3.googleusercontent.com" />
+    <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
+    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
+    <link rel="dns-prefetch" href="%VITE_SUPABASE_URL%" />
+
+    <!--
       Resolve the theme before first paint. Light is the default; a stored
       preference wins. Doing this here rather than in a React effect avoids a
       light-to-dark flash for dark-mode users, and means every element resolves

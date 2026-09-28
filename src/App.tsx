@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
 import { SearchPage } from './pages/SearchPage';
 import { PricingPage } from './pages/PricingPage';
+import { ProviderPage } from './pages/ProviderPage';
 import { LoginPage } from './pages/LoginPage';
 import { ClaimPage } from './pages/ClaimPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -14,6 +15,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<SearchPage />} />
         <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/providers/:providerId" element={<ProviderPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/claim/:providerId" element={<ClaimPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />

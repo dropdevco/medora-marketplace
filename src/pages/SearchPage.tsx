@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef, lazy, Suspense, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useTranslation } from 'react-i18next';
 import { useProviders } from '../hooks/useProviders';
@@ -27,10 +28,6 @@ import type { MapBox, Provider, ProviderFilters, Specialty } from '../types/prov
  */
 const MapView = lazy(() =>
     import('../components/map/MapView').then((m) => ({ default: m.MapView })),
-);
-
-const ProviderDrawer = lazy(() =>
-    import('../components/provider/ProviderDrawer').then((m) => ({ default: m.ProviderDrawer })),
 );
 
 const NAV_HEIGHT = 68;
@@ -70,9 +67,10 @@ function readAutoSearch(): boolean {
 
 export function SearchPage() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const {
         providers, allProviders, filters, updateFilter, patchFilters, resetFilters,
-        facets, vocabulary, selectedProvider, setSelectedProvider, loading,
+        facets, vocabulary, loading,
         knownPostalCodes, centre, postalPending, postalChoices,
     } = useProviders();
 
@@ -218,11 +216,6 @@ export function SearchPage() {
         [filters],
     );
 
-    /** Result index by provider id, so a map click can scroll the list to it. */
-    const indexById = useMemo(
-        () => new Map(providers.map((p, i) => [p.id, i])),
-        [providers],
-    );
 
     // A filter change can shorten the list under a scrolled-down window, which
     // otherwise leaves the user staring at blank space below the last result.
@@ -235,27 +228,27 @@ export function SearchPage() {
         patchFilters(patch);
     }, [patchFilters]);
 
+    /**
+     * Opening a result now means leaving the search page for the provider's
+     * own URL — a dedicated page, not a piece of page state, so it can be
+     * bookmarked, shared, and survives a refresh. `trackProviderClick` still
+     * fires here rather than on the provider page itself: it is the click on
+     * the *listing* that we count, and the destination page doesn't need to
+     * know it came from a search result versus, say, a shared link.
+     */
     const handleSelect = useCallback((p: Provider) => {
         trackProviderClick(p);
-        setSelectedProvider((current) => (current?.id === p.id ? null : p));
-    }, [setSelectedProvider]);
+        navigate(`/providers/${p.id}`);
+    }, [navigate]);
 
     /**
-     * A pin was clicked. Bring its row into view.
-     *
-     * Only on click, never on hover — the cursor crosses a lot of pins while
-     * panning, and scrolling under each one turns the list into a slot machine.
-     * 'auto' rather than 'smooth': the rows measure themselves, and a smooth
-     * scroll races that re-measure into a visible overshoot.
+     * A pin's "full details" was clicked. Same navigation as any other result:
+     * the pin carries the whole Provider, so it doesn't need to be in the
+     * current list to open its page.
      */
     const handleProviderFromMap = useCallback((p: Provider) => {
         handleSelect(p);
-        if (view !== 'list') return;
-        const index = indexById.get(p.id);
-        if (index !== undefined) {
-            rowVirtualizer.scrollToIndex(index, { align: 'center', behavior: 'auto' });
-        }
-    }, [handleSelect, indexById, view, rowVirtualizer]);
+    }, [handleSelect]);
 
     /**
      * Release the viewport whenever a non-spatial filter changes.
@@ -425,11 +418,16 @@ export function SearchPage() {
                                                 >
                                                     <ProviderCard
                                                         provider={p}
-                                                        selected={selectedProvider?.id === p.id}
+                                                        selected={false}
                                                         onClick={handleSelect}
                                                         onHover={setHoveredId}
                                                         focused={focusedId === p.id}
                                                         distance={distanceOf(p)}
+                                                        // Only the first few rows are above the fold when
+                                                        // the list first paints; the virtualizer recycles
+                                                        // this component past that so index alone is a
+                                                        // safe, cheap check (no scroll-position tracking).
+                                                        priority={virtualRow.index < 4}
                                                     />
                                                 </div>
                                             );
@@ -450,20 +448,15 @@ export function SearchPage() {
                         >
                             {/* The map draws a capped subset of the results.
                                 Saying so is what keeps a map showing 150 of 807
-                                from reading as a map that lost 657 clinics. */}
-                            {pinCount && pinCount.shown < pinCount.total && (
-                                <div className="ms-map-note" role="status">
-                                    {t(pinCount.capped ? 'map.showingCapped' : 'map.showingInView', {
-                                        shown: pinCount.shown,
-                                        total: pinCount.total,
-                                    })}
-                                </div>
-                            )}
+                                from reading as a map that lost 657 clinics.
+                                The note itself is rendered inside MapView's
+                                top overlay stack (alongside the "search as I
+                                move" toggle) so the two pills can never
+                                overlap — we just hand down the text. */}
                             <Suspense fallback={<MapPlaceholder label={t('map.loading')} />}>
                                 <MapView
                                     providers={providers}
                                     allProviders={allProviders}
-                                    selectedProvider={selectedProvider}
                                     onProviderSelect={handleProviderFromMap}
                                     hoveredId={hoveredId}
                                     onProviderFocus={setFocusedId}
@@ -474,6 +467,12 @@ export function SearchPage() {
                                     mapArea={filters.mapArea}
                                     fitKey={fitKey}
                                     onVisibleCountChange={handleVisibleCount}
+                                    topNote={pinCount && pinCount.shown < pinCount.total
+                                        ? t(pinCount.capped ? 'map.showingCapped' : 'map.showingInView', {
+                                            shown: pinCount.shown,
+                                            total: pinCount.total,
+                                        })
+                                        : undefined}
                                 />
                             </Suspense>
                         </div>
@@ -533,12 +532,6 @@ export function SearchPage() {
                     count={providers.length}
                     onClose={() => setFiltersOpen(false)}
                 />
-            )}
-
-            {selectedProvider && (
-                <Suspense fallback={null}>
-                    <ProviderDrawer provider={selectedProvider} onClose={() => setSelectedProvider(null)} />
-                </Suspense>
             )}
         </div>
     );

@@ -6,6 +6,7 @@ import { IconLocate, IconMapPin } from '../icons/Icons';
 import { specialtyColor } from '../../utils/specialtyColors';
 import { MAPS_API_KEY as API_KEY } from '../../lib/googleMaps';
 import { ratingOf } from '../../utils/rating';
+import { darkMapStyles, lightMapStyles } from './mapStyles';
 
 /** Fallback view if we have no providers at all to derive bounds from. */
 const BORDER_CENTER = { lat: 31.738, lng: -106.455 };
@@ -51,7 +52,6 @@ interface MapViewProps {
     providers: Provider[];
     /** Unfiltered set — defines the pannable region so filtering can't unlock the globe. */
     allProviders: Provider[];
-    selectedProvider: Provider | null;
     onProviderSelect: (p: Provider) => void;
     /**
      * The result card the cursor is currently over. Hovering a card lights up
@@ -89,6 +89,13 @@ interface MapViewProps {
      * page can tell the user the map is showing a subset.
      */
     onVisibleCountChange?: (shown: number, total: number, capped: boolean) => void;
+    /**
+     * Status text to show at the top of the map (e.g. "showing 150 of 807").
+     * Rendered by MapView itself, inside the same top-center overlay stack as
+     * the "search as I move" toggle, so the two never compete for the same
+     * strip of space. Owned by the page — MapView only lays it out.
+     */
+    topNote?: React.ReactNode;
 }
 
 /** Bounding box of a provider set, or null when there is nothing to bound. */
@@ -133,10 +140,10 @@ function escapeHtml(s: string): string {
 }
 
 export function MapView({
-    providers, allProviders, selectedProvider, onProviderSelect, hoveredId = null,
+    providers, allProviders, onProviderSelect, hoveredId = null,
     onProviderFocus, onSearchArea, onBoundsChange, autoSearch = false, onAutoSearchChange,
     mapArea = null, fitKey,
-    maxPins = DEFAULT_MAX_PINS, onVisibleCountChange,
+    maxPins = DEFAULT_MAX_PINS, onVisibleCountChange, topNote,
 }: MapViewProps) {
     const { t } = useTranslation();
     const containerRef = useRef<HTMLDivElement>(null);
@@ -158,7 +165,6 @@ export function MapView({
     const providersByIdRef = useRef<Map<string, Provider>>(new Map());
     const onSelectRef = useRef(onProviderSelect);
     const onFocusRef = useRef(onProviderFocus);
-    const selectedIdRef = useRef<string | null>(null);
     const hoveredIdRef = useRef<string | null>(null);
     const overviewHtmlRef = useRef<(p: Provider) => string>(() => '');
 
@@ -189,14 +195,11 @@ export function MapView({
     // ── Marker icon builder ────────────────────────────────────────────────
     const makeIcon = useCallback((
         provider: Provider,
-        isSelected: boolean,
         isHovered = false,
     ): google.maps.Symbol => {
-        // Three states have to be tellable apart at a glance, on a pin eight
-        // pixels across. Selected is a filled dark disc; hover inverts it —
-        // white disc, heavy dark ring — so it reads as "this one" without
-        // reading as a second selection. Hover used to share the selected fill
-        // and differ only by one pixel of radius, which was no signal at all.
+        // Two states have to be tellable apart at a glance, on a pin eight
+        // pixels across. Hover inverts the idle fill — white disc, heavy dark
+        // ring — so it reads as "this one" at a glance.
         //
         // Idle pins are tinted by *specialty*, not by side of the border. The
         // country was never the question anyone brought to the map — "where
@@ -208,29 +211,27 @@ export function MapView({
 
         return {
             path: google.maps.SymbolPath.CIRCLE,
-            fillColor: isSelected ? '#1b1d22' : isHovered ? '#ffffff' : idleFill,
+            fillColor: isHovered ? '#ffffff' : idleFill,
             fillOpacity: 1,
             strokeColor: isHovered ? '#1b1d22' : '#ffffff',
-            strokeWeight: isSelected ? 4 : isHovered ? 5 : 2.5,
-            scale: isSelected ? 13 : isHovered ? 11 : provider.promoted ? 10 : 8,
+            strokeWeight: isHovered ? 5 : 2.5,
+            scale: isHovered ? 11 : provider.promoted ? 10 : 8,
         };
     }, []);
 
     /**
-     * Repaint one marker from whatever it currently is. Selection and hover
-     * both flow through here so the two can never disagree about a pin — the
-     * bug being avoided is a hovered-then-selected marker reverting to its
-     * idle colour when the cursor leaves.
+     * Repaint one marker from whatever it currently is. Hover flows through
+     * here so a hovered marker reverting to its idle colour on leave always
+     * reads whatever the ref currently says, never a stale closure.
      */
     const restyle = useCallback((id: string | null) => {
         if (!id) return;
         const marker = markersRef.current.get('p' + id);
         const provider = providersByIdRef.current.get(id);
         if (!marker || !provider) return;
-        const isSelected = selectedIdRef.current === id;
         const isHovered = hoveredIdRef.current === id;
-        marker.setIcon(makeIcon(provider, isSelected, isHovered));
-        marker.setZIndex(isSelected ? 999 : isHovered ? 998 : provider.promoted ? 50 : 1);
+        marker.setIcon(makeIcon(provider, isHovered));
+        marker.setZIndex(isHovered ? 998 : provider.promoted ? 50 : 1);
     }, [makeIcon]);
 
     // ── Hover overview card ────────────────────────────────────────────────
@@ -383,8 +384,6 @@ export function MapView({
 
     useEffect(() => {
         if (!mapInstance) return;
-        // Selecting a clinic has its own camera move; don't fight it.
-        if (selectedProvider) { framedRef.current = true; return; }
         // A map-area search means the user chose this camera. Refitting would
         // move it out from under them, and then filter on where it landed.
         if (mapArea) { framedRef.current = true; return; }
@@ -414,7 +413,7 @@ export function MapView({
         // non-empty lists, but the empty -> non-empty transition is the initial
         // data load, and skipping that left the map parked on its default view
         // for the whole session.
-    }, [mapInstance, fitDep, hasResults, selectedProvider, mapArea]);
+    }, [mapInstance, fitDep, hasResults, mapArea]);
 
     // ── Container resize ───────────────────────────────────────────────────
     /**
@@ -499,19 +498,21 @@ export function MapView({
                 drawn.push(p);
             }
 
-            // The selected and hovered pins are never subject to the cap. A
-            // hovered card whose pin was suppressed is exactly the bug this
-            // whole rewrite exists to kill.
+            // The hovered pin is never subject to the cap. A hovered card whose
+            // pin was suppressed is exactly the bug this whole rewrite exists
+            // to kill.
             //
             // The exemption stops at the viewport edge, though. Marking a
             // provider that is off screen builds a marker nobody can see, so
             // it costs a draw pass and pays back nothing.
-            for (const id of [selectedIdRef.current, hoveredIdRef.current]) {
-                if (!id || drawn.some((p) => p.id === id)) continue;
-                const pinned = providersByIdRef.current.get(id);
-                if (!pinned || !Number.isFinite(pinned.lat) || !Number.isFinite(pinned.lng)) continue;
-                if (!bounds.contains(new google.maps.LatLng(pinned.lat, pinned.lng))) continue;
-                drawn.push(pinned);
+            {
+                const id = hoveredIdRef.current;
+                const pinned = id ? providersByIdRef.current.get(id) : undefined;
+                if (id && pinned && !drawn.some((p) => p.id === id)
+                    && Number.isFinite(pinned.lat) && Number.isFinite(pinned.lng)
+                    && bounds.contains(new google.maps.LatLng(pinned.lat, pinned.lng))) {
+                    drawn.push(pinned);
+                }
             }
 
             const needed = new Set<string>();
@@ -560,13 +561,10 @@ export function MapView({
                 }
 
                 cellByKeyRef.current.set(key, provider.id);
-                const isSelected = selectedIdRef.current === provider.id;
                 const isHovered = hoveredIdRef.current === provider.id;
-                marker.setIcon(makeIcon(provider, isSelected, isHovered));
+                marker.setIcon(makeIcon(provider, isHovered));
                 marker.setTitle(provider.name);
-                marker.setZIndex(
-                    isSelected ? 999 : isHovered ? 998 : provider.promoted ? 50 : 1,
-                );
+                marker.setZIndex(isHovered ? 998 : provider.promoted ? 50 : 1);
             }
 
             // Retire anything the new viewport no longer needs.
@@ -606,8 +604,8 @@ export function MapView({
     /**
      * Is this provider inside the camera box right now?
      *
-     * Hover and selection redraw only for a provider the *cap* suppressed,
-     * never for one that is simply off screen. Without the distinction,
+     * Hover redraws only for a provider the *cap* suppressed, never for one
+     * that is simply off screen. Without the distinction,
      * scrubbing a list of 807 results — most of which sit outside the current
      * view — fires a full draw pass per row, which is the "moving down a list
      * feels like dragging" failure the ref-based listener architecture exists
@@ -633,21 +631,6 @@ export function MapView({
         drawRef.current();
     }, [providers, maxPins, mapInstance]);
 
-    // -- Selection styling --------------------------------------------------
-    // Only the two affected markers are touched, instead of all of them.
-    useEffect(() => {
-        const previousId = selectedIdRef.current;
-        const nextId = selectedProvider?.id ?? null;
-        if (previousId === nextId) return;
-        selectedIdRef.current = nextId;
-
-        // Same cap exemption as hover: a selection past the cap needs a redraw
-        // before it has a marker to restyle.
-        if (nextId && !markersRef.current.has('p' + nextId) && isInView(nextId)) drawRef.current();
-        restyle(previousId);
-        restyle(nextId);
-    }, [selectedProvider, restyle, isInView]);
-
     // ── Hover styling ──────────────────────────────────────────────────────
     /**
      * The bridge between the list and the map. Only the two affected markers
@@ -667,12 +650,6 @@ export function MapView({
         restyle(previousId);
         restyle(hoveredId);
     }, [hoveredId, restyle, isInView]);
-    // ── Pan to selected ────────────────────────────────────────────────────
-    useEffect(() => {
-        if (!mapInstance || !selectedProvider) return;
-        mapInstance.panTo({ lat: selectedProvider.lat, lng: selectedProvider.lng });
-        if ((mapInstance.getZoom() ?? 0) < 15) mapInstance.setZoom(15);
-    }, [selectedProvider, mapInstance]);
 
     // ── Geolocation ────────────────────────────────────────────────────────
     const locateUser = useCallback(() => {
@@ -759,6 +736,15 @@ export function MapView({
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center', gap: '1rem',
             }}>
+                {/* No follow toggle in preview mode (there's no live camera to
+                    track), but the status note still belongs in the same
+                    top-center slot so it doesn't collide with anything else
+                    that gets added above the map later. */}
+                {topNote && (
+                    <div className="ms-map-overlay-top">
+                        <div className="ms-map-note" role="status">{topNote}</div>
+                    </div>
+                )}
                 <svg
                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.5 }}
                     viewBox="0 0 800 600"
@@ -786,9 +772,7 @@ export function MapView({
                             width: p.promoted ? 40 : 32,
                             height: p.promoted ? 40 : 32,
                             borderRadius: '50%',
-                            background: selectedProvider?.id === p.id
-                                ? 'var(--gold)'
-                                : p.country === 'MX' ? 'var(--mx)' : 'var(--us)',
+                            background: p.country === 'MX' ? 'var(--mx)' : 'var(--us)',
                             border: '3px solid var(--navy-800)',
                             boxShadow: 'var(--shadow-sm)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -841,38 +825,29 @@ export function MapView({
                 <IconLocate size={21} />
             </button>
 
-            {onAutoSearchChange && (
-                <label
-                    className="ms-map-follow"
-                    style={{
-                        position: 'absolute',
-                        top: '16px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.5rem 0.9rem',
-                        borderRadius: 'var(--radius-pill)',
-                        background: 'var(--navy-800)',
-                        border: '1px solid var(--border-strong)',
-                        boxShadow: 'var(--shadow-sm)',
-                        color: 'var(--white)',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        whiteSpace: 'nowrap',
-                        cursor: 'pointer',
-                        zIndex: 10,
-                    }}
-                >
-                    <input
-                        type="checkbox"
-                        checked={autoSearch}
-                        onChange={(e) => onAutoSearchChange(e.target.checked)}
-                        style={{ width: '15px', height: '15px', accentColor: 'var(--accent)', cursor: 'pointer' }}
-                    />
-                    {t('map.searchAsIMove')}
-                </label>
+            {/* Top-center overlay stack: the follow toggle first, then the
+                status note beneath it. One flex column instead of two
+                independently-positioned pills means they can never overlap —
+                the container is pointer-events:none so it never intercepts a
+                drag on the map, and each child opts back into pointer-events
+                where it needs to be clickable. */}
+            {(onAutoSearchChange || topNote) && (
+                <div className="ms-map-overlay-top">
+                    {onAutoSearchChange && (
+                        <label className="ms-map-follow">
+                            <input
+                                type="checkbox"
+                                checked={autoSearch}
+                                onChange={(e) => onAutoSearchChange(e.target.checked)}
+                                style={{ width: '15px', height: '15px', accentColor: 'var(--accent)', cursor: 'pointer', flexShrink: 0 }}
+                            />
+                            <span className="ms-map-follow-label">{t('map.searchAsIMove')}</span>
+                        </label>
+                    )}
+                    {topNote && (
+                        <div className="ms-map-note" role="status">{topNote}</div>
+                    )}
+                </div>
             )}
 
             {canSearchArea && (
@@ -902,71 +877,3 @@ export function MapView({
         </div>
     );
 }
-
-/**
- * The map is allowed to carry colour now.
- *
- * The previous pair spent colour only on the border stroke and left
- * everything else grey, which read as a wireframe rather than as a place.
- * These give water, parks and hospitals their own hues — the reference is
- * Airbnb's map, where the land is warm, the water is genuinely blue, and
- * green space is legible at a glance — while keeping two constraints from
- * the old styles: commercial POIs stay off (they compete with our pins for
- * the same meaning), and `administrative.country` keeps the accent stroke,
- * because the border line is the product.
- *
- * `poi.medical` is the one POI category left visible. On a clinic directory
- * a hospital on the map is context, not clutter.
- */
-const darkMapStyles: google.maps.MapTypeStyle[] = [
-    { elementType: 'geometry', stylers: [{ color: '#1a1d21' }] },
-    { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-    { elementType: 'labels.text.stroke', stylers: [{ color: '#12151a' }, { weight: 3 }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#9aa0a8' }] },
-    { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#3a3f47' }] },
-    { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
-    { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d7dade' }] },
-    { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#212429' }] },
-    { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#1e2430' }] },
-    { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1c3b30' }, { visibility: 'on' }] },
-    { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#5f9e83' }] },
-    { featureType: 'poi.medical', elementType: 'geometry', stylers: [{ color: '#3a2630' }, { visibility: 'on' }] },
-    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#33363c' }] },
-    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1a1d21' }] },
-    { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#3e434a' }] },
-    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#6b5a34' }] },
-    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#1a1d21' }] },
-    { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#e2c98d' }] },
-    { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#16303f' }] },
-    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#5b93ad' }] },
-    { featureType: 'administrative.country', elementType: 'geometry.stroke', stylers: [{ color: '#4fc79f' }, { weight: 2.4 }] },
-];
-
-const lightMapStyles: google.maps.MapTypeStyle[] = [
-    { elementType: 'geometry', stylers: [{ color: '#f4f1ea' }] },
-    { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#5a5f68' }] },
-    { elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }, { weight: 3 }] },
-    { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#cfc9bd' }] },
-    { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
-    { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#14161a' }] },
-    { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#eeeae1' }] },
-    { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#e9e6db' }] },
-    { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#c6e0c4' }, { visibility: 'on' }] },
-    { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#3d7a4e' }] },
-    { featureType: 'poi.medical', elementType: 'geometry', stylers: [{ color: '#f3d9dd' }, { visibility: 'on' }] },
-    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
-    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#e3ded2' }] },
-    { featureType: 'road.arterial', elementType: 'labels.text.fill', stylers: [{ color: '#3c4046' }] },
-    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#fbe6b4' }] },
-    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#e8cd93' }] },
-    { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#1d1f24' }] },
-    { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#6d7178' }] },
-    { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#a6cbe3' }] },
-    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#2f6d8f' }] },
-    { featureType: 'administrative.country', elementType: 'geometry.stroke', stylers: [{ color: '#0f6b52' }, { weight: 2.4 }] },
-];

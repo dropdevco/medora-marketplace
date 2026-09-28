@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { ProviderFilters, SortMode, Specialty } from '../../types/provider';
 import { IconClose, IconMapPin } from '../icons/Icons';
 import { RADIUS_OPTIONS } from '../../utils/geo';
+import { formatPrice } from '../../utils/currency';
 import type { PostalHit } from '../../utils/postalGeocode';
 
 const SORTS: SortMode[] = ['relevance', 'rating', 'reviews', 'distance', 'price'];
@@ -41,7 +42,7 @@ export function FilterSummary({
     postalChoices,
     onChoosePostal,
 }: FilterSummaryProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
 
     const drop = <K extends keyof ProviderFilters>(key: K, value: ProviderFilters[K]) =>
         () => updateFilter(key, value);
@@ -179,7 +180,7 @@ export function FilterSummary({
                     {filters.withPricing && (
                         <FilterChip
                             label={filters.maxPriceMxn != null
-                                ? `≤ $${filters.maxPriceMxn.toLocaleString()}`
+                                ? `≤ ${formatPrice(filters.maxPriceMxn, i18n.language)}`
                                 : t('filters.withPricing', { defaultValue: 'Publishes prices' })}
                             onRemove={() => patchFilters({ withPricing: false, maxPriceMxn: null })}
                         />

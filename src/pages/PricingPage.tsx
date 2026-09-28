@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { mockProviders } from '../data/providers';
 import { useProviders } from '../hooks/useProviders';
@@ -29,29 +29,41 @@ const ADDONS = [
     { key: 'seo', icon: <IconStar size={19} weight={1.8} /> },
 ] as const;
 
-interface Stats { providers: number; avgRating: string; clicks: number; specialties: number }
+interface Stats { providers: number; clicks: number }
 
 function computeStats(list: Provider[]): Stats {
-    if (list.length === 0) return { providers: 0, avgRating: '0.0', clicks: 0, specialties: 0 };
-    const specialties = new Set(list.flatMap((p) => p.specialty ?? []));
+    if (list.length === 0) return { providers: 0, clicks: 0 };
     return {
         providers: list.length,
-        avgRating: (list.reduce((s, p) => s + (p.rating || 0), 0) / list.length).toFixed(1),
         clicks: list.reduce((s, p) => s + (p.clicks || 0), 0),
-        specialties: specialties.size,
     };
 }
 
 export function PricingPage() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [modalPlan, setModalPlan] = useState<string | null>(null);
+
+    // English readers only ever see USD; the MXN line is a courtesy for
+    // Spanish-speaking clinics who budget in pesos, so it stays hidden (not
+    // deleted — the keys are unchanged) whenever the site language is English.
+    const isEnglish = i18n.language.startsWith('en');
 
     // Quote the real directory, not the 16-row mock fixture. The mock is only
     // a placeholder while the fetch is in flight or Supabase is unreachable.
     const { allProviders } = useProviders();
     const stats = computeStats(allProviders.length > 0 ? allProviders : mockProviders);
 
-    const openForm = (plan: string) => setModalPlan(plan);
+    const navigate = useNavigate();
+
+    // "Get listed free" is onboarding, not a contact form: it goes to the same
+    // survey-then-claim/publish flow a doctor gets at /borderhealth, so what
+    // they answer builds their listing. Paid plans and add-ons are sales
+    // inquiries and keep the modal.
+    const FREE_ENTRIES = ['hero', 'free', 'closing'];
+    const openForm = (plan: string) => {
+        if (FREE_ENTRIES.includes(plan)) navigate('/borderhealth?seg=provider&by=listing');
+        else setModalPlan(plan);
+    };
     const closeForm = () => setModalPlan(null);
 
     return (
@@ -168,30 +180,130 @@ export function PricingPage() {
                 </div>
             </section>
 
-            {/* ══ Stats ══════════════════════════════════════════════ */}
-            <section style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
+            {/* ══ Pricing ════════════════════════════════════════════
+                Second section on the page, right after the hero — pricing is
+                the thing a clinic clicks through for, so it should not be
+                buried below stats/how-it-works/coverage. No top border of its
+                own: the hero's borderBottom already delineates it.
+                ═══════════════════════════════════════════════════════ */}
+            <section id="pricing" style={{ padding: '6.5rem 1.5rem', scrollMarginTop: '90px' }}>
+                <Reveal>
+                    <div style={{ maxWidth: 880, margin: '0 auto' }}>
+                        <SectionHead eyebrow={t('sales.pricingEyebrow')} title={t('sales.pricingTitle')} body={t('sales.pricingSubtitle')} />
+
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                justifyContent: 'center',
+                                alignItems: 'stretch',
+                                gap: '1.35rem',
+                            }}
+                        >
+                            <PricingCard
+                                tier={t('pricing.basicTier')}
+                                price="$0"
+                                period={t('pricing.basicPeriod')}
+                                features={[t('pricing.basicF1'), t('pricing.basicF2'), t('pricing.basicF3'), t('pricing.basicF4')]}
+                                ctaLabel={t('pricing.basicCta')}
+                                onCta={() => openForm('free')}
+                            />
+                            <PricingCard
+                                featured
+                                tier={t('pricing.promotedTier')}
+                                price="$49"
+                                period={t('pricing.perMonth')}
+                                note={isEnglish ? undefined : t('pricing.promotedMxn')}
+                                badge={t('pricing.promotedBadge')}
+                                features={[t('pricing.promotedF1'), t('pricing.promotedF2'), t('pricing.promotedF3'), t('pricing.promotedF4')]}
+                                ctaLabel={t('pricing.promotedCta')}
+                                onCta={() => openForm('promoted')}
+                            />
+                            <PricingCard
+                                tier={t('pricing.featuredTier')}
+                                price="$99"
+                                period={t('pricing.perMonth')}
+                                note={isEnglish ? undefined : t('pricing.featuredMxn')}
+                                features={[t('pricing.featuredF1'), t('pricing.featuredF2'), t('pricing.featuredF3'), t('pricing.featuredF4')]}
+                                ctaLabel={t('pricing.featuredCta')}
+                                onCta={() => openForm('featured')}
+                            />
+                        </div>
+
+                        <p style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.9rem', color: 'var(--gray-400)' }}>
+                            {t('pricing.terms')}
+                        </p>
+                    </div>
+                </Reveal>
+            </section>
+
+            {/* == Add-ons ============================================
+                Everything above is placement. This is the work, and it is
+                where most of the revenue actually is, so it gets a section
+                rather than a footnote. Priced "from": every one of these is
+                scoped per clinic.
+                ======================================================= */}
+            <section style={{ padding: '0 1.5rem 6.5rem' }}>
+                <Reveal>
+                    <div style={{ maxWidth: 880, margin: '0 auto' }}>
+                        <SectionHead
+                            eyebrow={t('pricing.addonsEyebrow')}
+                            title={t('pricing.addonsTitle')}
+                            body={t('pricing.addonsSubtitle')}
+                        />
+
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                justifyContent: 'center',
+                                alignItems: 'stretch',
+                                gap: '1rem',
+                            }}
+                        >
+                            {ADDONS.map((addon) => (
+                                <AddonCard
+                                    key={addon.key}
+                                    icon={addon.icon}
+                                    title={t('pricing.addon.' + addon.key + '.title')}
+                                    price={t('pricing.addon.' + addon.key + '.price')}
+                                    priceMxn={isEnglish ? undefined : t('pricing.addon.' + addon.key + '.priceMxn')}
+                                    body={t('pricing.addon.' + addon.key + '.body')}
+                                    ctaLabel={t('pricing.addonCta')}
+                                    onCta={() => openForm('addon-' + addon.key)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </Reveal>
+            </section>
+
+            {/* ══ Stats ══════════════════════════════════════════════
+                Only providers/cities are always shown; profile views only
+                appear once click tracking actually records something (rather
+                than advertising a zero). With the rating and specialties
+                tiles gone the tile count can be 2 or 3, so this uses a
+                centered flex row instead of a grid — an incomplete row of
+                fixed-width tiles stays centered instead of stranding itself
+                against the left edge. Now follows the (unbordered) add-ons
+                section, so it carries its own top border to delineate it.
+                ═══════════════════════════════════════════════════════ */}
+            <section style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
                 <Reveal>
                     <div
                         style={{
                             maxWidth: 1180, margin: '0 auto',
                             padding: '3.5rem 1.5rem',
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            justifyContent: 'center',
                             gap: '1.25rem',
                         }}
                     >
                         <StatTile icon={<IconClinic size={24} />} value={`${stats.providers}+`} label={t('sales.statsProviders')} accent="var(--us)" />
-                        {/*
-                          Profile views only appear once click tracking actually
-                          records something. Until then we show a figure we can
-                          stand behind rather than advertising a zero.
-                        */}
-                        {stats.clicks > 0 ? (
+                        {stats.clicks > 0 && (
                             <StatTile icon={<IconViews size={24} />} value={stats.clicks.toLocaleString()} label={t('sales.statsViews')} accent="var(--gold)" />
-                        ) : (
-                            <StatTile icon={<IconClipboard size={24} />} value={String(stats.specialties)} label={t('sales.statsSpecialties')} accent="var(--gold)" />
                         )}
-                        <StatTile icon={<IconStar size={24} />} value={stats.avgRating} label={t('sales.statsRating')} accent="var(--star)" />
                         <StatTile icon={<IconBorder size={24} />} value="2" label={t('sales.statsCities')} accent="var(--mx)" />
                     </div>
                 </Reveal>
@@ -240,95 +352,6 @@ export function PricingPage() {
                             region={t('sales.cityJuarezRegion')}
                             body={t('sales.cityJuarezBody')}
                         />
-                    </div>
-                </Reveal>
-            </section>
-
-            {/* ══ Pricing ════════════════════════════════════════════ */}
-            <section id="pricing" style={{ padding: '6.5rem 1.5rem', scrollMarginTop: '90px' }}>
-                <Reveal>
-                    <div style={{ maxWidth: 880, margin: '0 auto' }}>
-                        <SectionHead eyebrow={t('sales.pricingEyebrow')} title={t('sales.pricingTitle')} body={t('sales.pricingSubtitle')} />
-
-                        <div
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                                gap: '1.35rem',
-                            }}
-                        >
-                            <PricingCard
-                                tier={t('pricing.basicTier')}
-                                price="$0"
-                                period={t('pricing.basicPeriod')}
-                                features={[t('pricing.basicF1'), t('pricing.basicF2'), t('pricing.basicF3'), t('pricing.basicF4')]}
-                                ctaLabel={t('pricing.basicCta')}
-                                onCta={() => openForm('free')}
-                            />
-                            <PricingCard
-                                featured
-                                tier={t('pricing.promotedTier')}
-                                price="$49"
-                                period={t('pricing.perMonth')}
-                                note={t('pricing.promotedMxn')}
-                                badge={t('pricing.promotedBadge')}
-                                features={[t('pricing.promotedF1'), t('pricing.promotedF2'), t('pricing.promotedF3'), t('pricing.promotedF4')]}
-                                ctaLabel={t('pricing.promotedCta')}
-                                onCta={() => openForm('promoted')}
-                            />
-                            <PricingCard
-                                tier={t('pricing.featuredTier')}
-                                price="$99"
-                                period={t('pricing.perMonth')}
-                                note={t('pricing.featuredMxn')}
-                                features={[t('pricing.featuredF1'), t('pricing.featuredF2'), t('pricing.featuredF3'), t('pricing.featuredF4')]}
-                                ctaLabel={t('pricing.featuredCta')}
-                                onCta={() => openForm('featured')}
-                            />
-                        </div>
-
-                        <p style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.9rem', color: 'var(--gray-400)' }}>
-                            {t('pricing.terms')}
-                        </p>
-                    </div>
-                </Reveal>
-            </section>
-
-            {/* == Add-ons ============================================
-                Everything above is placement. This is the work, and it is
-                where most of the revenue actually is, so it gets a section
-                rather than a footnote. Priced "from": every one of these is
-                scoped per clinic.
-                ======================================================= */}
-            <section style={{ padding: '0 1.5rem 6.5rem' }}>
-                <Reveal>
-                    <div style={{ maxWidth: 880, margin: '0 auto' }}>
-                        <SectionHead
-                            eyebrow={t('pricing.addonsEyebrow')}
-                            title={t('pricing.addonsTitle')}
-                            body={t('pricing.addonsSubtitle')}
-                        />
-
-                        <div
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                                gap: '1rem',
-                            }}
-                        >
-                            {ADDONS.map((addon) => (
-                                <AddonCard
-                                    key={addon.key}
-                                    icon={addon.icon}
-                                    title={t('pricing.addon.' + addon.key + '.title')}
-                                    price={t('pricing.addon.' + addon.key + '.price')}
-                                    priceMxn={t('pricing.addon.' + addon.key + '.priceMxn')}
-                                    body={t('pricing.addon.' + addon.key + '.body')}
-                                    ctaLabel={t('pricing.addonCta')}
-                                    onCta={() => openForm('addon-' + addon.key)}
-                                />
-                            ))}
-                        </div>
                     </div>
                 </Reveal>
             </section>
@@ -536,6 +559,8 @@ function StatTile({ icon, value, label, accent }: {
         <div
             className="hover-lift"
             style={{
+                flex: '1 1 190px',
+                maxWidth: 240,
                 padding: '1.6rem',
                 borderRadius: 'var(--radius)',
                 background: 'var(--navy-800)',
@@ -605,6 +630,8 @@ function AddonCard({ icon, title, price, priceMxn, body, ctaLabel, onCta }: {
     return (
         <div
             style={{
+                flex: '1 1 280px',
+                maxWidth: 340,
                 padding: '1.5rem',
                 borderRadius: 'var(--radius)',
                 background: 'var(--navy-800)',
@@ -626,8 +653,10 @@ function AddonCard({ icon, title, price, priceMxn, body, ctaLabel, onCta }: {
             <div>
                 <p style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--gold)' }}>{price}</p>
                 {/* Same reasoning as the plan cards above: half the audience
-                    budgets in pesos, so the MXN figure rides along rather than
-                    making them convert it themselves. */}
+                    budgets in pesos, so the MXN figure rides along in Spanish
+                    rather than making them convert it themselves — but the
+                    caller passes `priceMxn={undefined}` in English, so USD
+                    stands alone there. */}
                 {priceMxn && (
                     <p style={{ fontSize: '0.76rem', color: 'var(--gray-500)', marginTop: '0.15rem' }}>{priceMxn}</p>
                 )}
@@ -660,6 +689,8 @@ function PricingCard({ tier, price, period, note, badge, features, featured = fa
         <div
             style={{
                 position: 'relative',
+                flex: '1 1 280px',
+                maxWidth: 340,
                 padding: '2.1rem',
                 borderRadius: 'calc(var(--radius) + 4px)',
                 background: featured ? 'var(--brand)' : 'var(--navy-800)',
@@ -699,8 +730,10 @@ function PricingCard({ tier, price, period, note, badge, features, featured = fa
                     <span className="display" style={{ fontSize: '3.2rem' }}>{price}</span>
                     <span style={{ fontSize: '0.92rem', opacity: 0.75 }}>{period}</span>
                 </div>
-                {/* Half the audience budgets in pesos. Quoting only USD makes
-                    them do the conversion before they can judge the price. */}
+                {/* Half the audience budgets in pesos, so a Spanish-language
+                    reader gets the MXN line rather than doing the conversion
+                    themselves. In English the site quotes USD only — the
+                    caller passes `note={undefined}` for English, keys intact. */}
                 {note && (
                     <p style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '0.35rem' }}>{note}</p>
                 )}

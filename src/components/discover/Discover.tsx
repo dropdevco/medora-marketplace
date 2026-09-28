@@ -50,15 +50,16 @@ export function Discover({ rows, loading, onSelect, onSeeAll }: DiscoverProps) {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2.75rem' }}>
-            {rows.map((row) => (
-                <Row key={row.id} row={row} onSelect={onSelect} onSeeAll={onSeeAll} />
+            {rows.map((row, rowIndex) => (
+                <Row key={row.id} row={row} rowIndex={rowIndex} onSelect={onSelect} onSeeAll={onSeeAll} />
             ))}
         </div>
     );
 }
 
-function Row({ row, onSelect, onSeeAll }: {
+function Row({ row, rowIndex, onSelect, onSeeAll }: {
     row: DiscoverRow;
+    rowIndex: number;
     onSelect: (p: Provider) => void;
     onSeeAll: (patch: Partial<ProviderFilters>) => void;
 }) {
@@ -135,9 +136,17 @@ function Row({ row, onSelect, onSeeAll }: {
             </div>
 
             <div ref={trackRef} onScroll={measure} className="ms-row-track">
-                {row.providers.map((p) => (
+                {row.providers.map((p, tileIndex) => (
                     <div key={p.id} className="ms-row-cell">
-                        <ProviderTile provider={p} onClick={onSelect} />
+                        <ProviderTile
+                            provider={p}
+                            onClick={onSelect}
+                            // Only the first couple of rows sit above the fold
+                            // on load, and only their first handful of tiles —
+                            // the rest of even those rows is off-screen until
+                            // the user scrolls the row horizontally.
+                            priority={rowIndex < 2 && tileIndex < 6}
+                        />
                     </div>
                 ))}
             </div>

@@ -6,6 +6,7 @@ import { SpecialtyLabels } from '../types/provider';
 import { supabase } from '../lib/supabase';
 import { mockProviders } from '../data/providers';
 import { normalizeProvider } from '../utils/normalizeProvider';
+import { readProviderCache, writeProviderCache } from '../utils/providerCache';
 import { DEFAULT_RADIUS_KM } from '../utils/geo';
 import { buildSearchIndex, tokenize } from '../utils/search';
 import { buildVocabulary, buildFacets } from '../utils/facets';
@@ -15,6 +16,103 @@ import { resolvePostal, type PostalHit } from '../utils/postalGeocode';
 
 const SPECIALTY_KEYS = new Set(Object.keys(SpecialtyLabels));
 const SORT_MODES = new Set<SortMode>(['relevance', 'rating', 'reviews', 'distance', 'price']);
+
+// ── Provider fetch ──────────────────────────────────────────────────────────
+
+type RawProviderRow = Record<string, unknown>;
+
+/** Distinguishes "no client configured" from a real fetch error, above. */
+class NoSupabaseClientError extends Error {}
+
+const PAGE_SIZE = 1000;
+
+/**
+ * The full directory, paged from Supabase.
+ *
+ * Page 0 asks for an exact count (`{ count: 'exact' }`), which lets every
+ * remaining page be requested concurrently with `Promise.all` instead of one
+ * after another — each `select=*` page measured ~0.9s TTFB, and five of them
+ * sequentially was most of the ~3s it took the old code to get the last byte
+ * of the directory. `.order('id')` is added to every page (page 0 included)
+ * so the ranges stay stable across concurrent requests: without a stable
+ * order Postgres is free to return a different row order per request, and
+ * parallel `.range()` calls would then silently overlap or skip rows.
+ *
+ * If Supabase ever declines to report a count (some proxies/mocks omit it),
+ * this falls back to the original sequential loop rather than guess a total.
+ */
+async function loadProvidersFromNetwork(): Promise<RawProviderRow[]> {
+    if (!supabase) {
+        throw new NoSupabaseClientError('Supabase client not initialized');
+    }
+
+    const first = await supabase
+        .from('providers')
+        .select('*', { count: 'exact' })
+        .eq('status', 'live')
+        .order('id')
+        .range(0, PAGE_SIZE - 1);
+
+    if (first.error) throw first.error;
+
+    const data: RawProviderRow[] = [...(first.data ?? [])];
+    const count = first.count;
+    const firstLen = first.data?.length ?? 0;
+
+    if (count == null) {
+        // No count back from the server — page sequentially, as before.
+        for (let from = PAGE_SIZE; ; from += PAGE_SIZE) {
+            const page = await supabase
+                .from('providers')
+                .select('*')
+                .eq('status', 'live')
+                .order('id')
+                .range(from, from + PAGE_SIZE - 1);
+            if (page.error) throw page.error;
+            data.push(...(page.data ?? []));
+            if (!page.data || page.data.length < PAGE_SIZE) break;
+        }
+    } else if (firstLen === PAGE_SIZE && count > PAGE_SIZE) {
+        const starts: number[] = [];
+        for (let from = PAGE_SIZE; from < count; from += PAGE_SIZE) starts.push(from);
+
+        const pages = await Promise.all(
+            starts.map((from) =>
+                supabase!
+                    .from('providers')
+                    .select('*')
+                    .eq('status', 'live')
+                    .order('id')
+                    .range(from, from + PAGE_SIZE - 1),
+            ),
+        );
+
+        for (const page of pages) {
+            if (page.error) throw page.error;
+            data.push(...(page.data ?? []));
+        }
+    }
+
+    return data;
+}
+
+/**
+ * Memoized at module scope so React StrictMode's dev-only double-mount
+ * awaits one in-flight request instead of firing the whole paginated fetch
+ * twice. A failed fetch clears the memo so a later mount (or a manual
+ * retry) can try again rather than replay the same rejection forever.
+ */
+let providersPromise: Promise<RawProviderRow[]> | null = null;
+
+function fetchProvidersOnce(): Promise<RawProviderRow[]> {
+    if (!providersPromise) {
+        providersPromise = loadProvidersFromNetwork().catch((err) => {
+            providersPromise = null;
+            throw err;
+        });
+    }
+    return providersPromise;
+}
 
 // ── URL ⇄ filters ───────────────────────────────────────────────────────────
 //
@@ -110,65 +208,51 @@ export function useProviders() {
     const { t } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
     const [allProviders, setAllProviders] = useState<Provider[]>([]);
-    const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         let mounted = true;
+        // Flips once the network settles (success or failure), so a slower
+        // cache read can't clobber fresh data — or a mock fallback — that
+        // already landed.
+        let networkSettled = false;
 
-        async function fetchProviders() {
-            if (!supabase) {
-                console.warn('[Supabase] client not initialized. Falling back to mock providers.');
+        // Stale-while-revalidate: an IndexedDB cache read races the network.
+        // If it wins and has usable rows, paint immediately and drop the
+        // loading state; the network response (a few hundred ms to a few
+        // seconds behind it) replaces it for real once it arrives, and never
+        // the other way around.
+        readProviderCache().then((cached) => {
+            if (!mounted || networkSettled || !cached || cached.length === 0) return;
+            setAllProviders(cached.map(normalizeProvider));
+            setLoading(false);
+        });
+
+        fetchProvidersOnce()
+            .then((data) => {
+                networkSettled = true;
+                if (!mounted) return;
+                if (data.length > 0) {
+                    setAllProviders(data.map(normalizeProvider));
+                    // Cache the raw rows (pre-normalize), never mock data.
+                    void writeProviderCache(data);
+                } else {
+                    console.warn('[Supabase] No providers found in DB, using mock data.');
+                    setAllProviders(mockProviders);
+                }
+            })
+            .catch((err) => {
+                networkSettled = true;
+                if (err instanceof NoSupabaseClientError) {
+                    console.warn('[Supabase] client not initialized. Falling back to mock providers.');
+                } else {
+                    console.error('[Supabase] Error fetching providers:', err);
+                }
                 if (mounted) setAllProviders(mockProviders);
-                setLoading(false);
-                return;
-            }
-
-            try {
-                // Supabase caps a single select at 1000 rows. The directory is
-                // larger than that, so page through or the map silently shows a
-                // fraction of the providers.
-                const PAGE_SIZE = 1000;
-                const data: Record<string, unknown>[] = [];
-                let error: { message: string } | null = null;
-
-                for (let from = 0; ; from += PAGE_SIZE) {
-                    const page = await supabase
-                        .from('providers')
-                        .select('*')
-                        .range(from, from + PAGE_SIZE - 1);
-
-                    if (page.error) {
-                        error = page.error;
-                        break;
-                    }
-                    data.push(...(page.data ?? []));
-                    if (!page.data || page.data.length < PAGE_SIZE) break;
-                }
-
-                if (error) {
-                    console.error('[Supabase] Error fetching providers:', error);
-                    if (mounted) setAllProviders(mockProviders);
-                    return;
-                }
-
-                if (mounted && data) {
-                    if (data.length > 0) {
-                        setAllProviders(data.map(normalizeProvider));
-                    } else {
-                        console.warn('[Supabase] No providers found in DB, using mock data.');
-                        setAllProviders(mockProviders);
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to fetch providers:', err);
-                if (mounted) setAllProviders(mockProviders);
-            } finally {
+            })
+            .finally(() => {
                 if (mounted) setLoading(false);
-            }
-        }
-
-        fetchProviders();
+            });
 
         return () => {
             mounted = false;
@@ -256,9 +340,14 @@ export function useProviders() {
      * The geocoder exists for the other 99.9% of codes on both sides of the
      * border, which is every code a patient is likely to type.
      */
-    const [remote, setRemote] = useState<{
+    // Only the geocoder's answer lives in state (set asynchronously). The
+    // "no lookup needed" and "still resolving" states are derived from the
+    // current filters below, rather than written from inside the effect —
+    // which also means a stale answer for a previous code/country can never
+    // be mistaken for the current one.
+    const [resolvedPostal, setResolvedPostal] = useState<{
         code: string;
-        state: 'resolving' | 'resolved';
+        country: ProviderFilters['country'];
         hits: PostalHit[];
     } | null>(null);
 
@@ -267,20 +356,32 @@ export function useProviders() {
         [filters.postalCode, postalCentroids],
     );
 
+    const needsRemote = Boolean(filters.postalCode) && !localCentre;
+
     useEffect(() => {
+        if (!needsRemote) return;
         const code = filters.postalCode;
-        if (!code || localCentre) {
-            setRemote(null);
-            return;
-        }
+        const country = filters.country;
 
         let live = true;
-        setRemote({ code, state: 'resolving', hits: [] });
-        resolvePostal(code, filters.country).then((hits) => {
-            if (live) setRemote({ code, state: 'resolved', hits });
+        resolvePostal(code, country).then((hits) => {
+            if (live) setResolvedPostal({ code, country, hits });
         });
         return () => { live = false; };
-    }, [filters.postalCode, filters.country, localCentre]);
+    }, [filters.postalCode, filters.country, needsRemote]);
+
+    const remote = useMemo((): {
+        code: string;
+        state: 'resolving' | 'resolved';
+        hits: PostalHit[];
+    } | null => {
+        if (!needsRemote) return null;
+        const code = filters.postalCode;
+        if (resolvedPostal && resolvedPostal.code === code && resolvedPostal.country === filters.country) {
+            return { code, state: 'resolved', hits: resolvedPostal.hits };
+        }
+        return { code, state: 'resolving', hits: [] };
+    }, [needsRemote, filters.postalCode, filters.country, resolvedPostal]);
 
     /**
      * The code means two places and the user has not said which side they are
@@ -363,8 +464,6 @@ export function useProviders() {
         resetFilters,
         facets,
         vocabulary,
-        selectedProvider,
-        setSelectedProvider,
         loading,
         /** Lets the UI tell "no providers near 32300" apart from "no such code". */
         knownPostalCodes: postalCentroids,

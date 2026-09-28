@@ -125,8 +125,8 @@
     "visitWebsite": "Visit Website",
     "services": "Services & prices",
     "servicesMore": "+{{count}} more",
-    "servicePriceFrom": "from {{price}} MXN",
-    "servicePrice": "{{price}} MXN",
+    "servicePriceFrom": "from {{price}}",
+    "servicePrice": "{{price}}",
     "serviceFree": "Free",
     "serviceDisclaimer": "Prices are as published by the provider and may have changed. Confirm before booking.",
     "licensed": "Cédula profesional",
@@ -172,8 +172,6 @@
     "trustBorder": "Both sides of the border",
     "statsProviders": "Clinics listed",
     "statsViews": "Profile views",
-    "statsSpecialties": "Specialties covered",
-    "statsRating": "Average rating",
     "statsCities": "Cities covered",
     "howEyebrow": "Getting started",
     "howTitle": "Three steps to your first patient",
@@ -243,9 +241,10 @@
     "es": "Spanish"
   },
   "card": {
-    "priceFrom": "From {{price}} MXN",
+    "priceFrom": "From {{price}}",
     "unrated": "New · no reviews yet",
     "new": "New",
+    "profileViews": "{{formatted}} profile views",
     "reviewsFrom": {
       "doctoralia": "({{formatted}} opinions on Doctoralia)",
       "google": "({{formatted}} Google reviews)",
@@ -267,25 +266,25 @@
     "aestheticJuarez": "Plastic surgery in Ciudad Juárez"
   },
   "pricing": {
-    "basicTier": "Básico",
+    "basicTier": "Basic",
     "basicPeriod": "free, forever",
     "basicF1": "Profile in the directory and on the map",
     "basicF2": "Claim and manage your own listing",
     "basicF3": "Found by patients on both sides of the border",
     "basicF4": "WhatsApp button on your profile",
     "basicCta": "Start free",
-    "perMonth": "/month",
-    "promotedTier": "Promovido",
+    "perMonth": "USD/month",
+    "promotedTier": "Promoted",
     "promotedMxn": "about $850 MXN",
     "promotedBadge": "Most popular",
-    "promotedF1": "Everything in Básico",
+    "promotedF1": "Everything in Basic",
     "promotedF2": "Promoted pin on the map and priority in search",
     "promotedF3": "Included in the weekly patient newsletter",
     "promotedF4": "Monthly report of profile views and contacts",
     "promotedCta": "Get promoted",
-    "featuredTier": "Destacado",
+    "featuredTier": "Featured",
     "featuredMxn": "about $1,700 MXN",
-    "featuredF1": "Everything in Promovido",
+    "featuredF1": "Everything in Promoted",
     "featuredF2": "First position in your category",
     "featuredF3": "Full analytics dashboard",
     "featuredF4": "Quarterly SEO and AI visibility audit, plus priority support",
@@ -409,5 +408,18 @@
       "analytics": "Full analytics, measured rather than estimated",
       "top": "First position in your category"
     }
+  },
+  "providerPage": {
+    "backToResults": "Back to results",
+    "backToDirectory": "Back to the directory",
+    "notFoundTitle": "We couldn't find that listing",
+    "notFoundBody": "It may have been removed, or the link may be out of date.",
+    "contact": "Contact",
+    "website": "Visit website",
+    "getDirections": "Get directions",
+    "pricesFrom": "Prices from",
+    "mapAlt": "Map showing the location of {{name}}",
+    "pageTitle": "{{name}} — MedSociety",
+    "pageDescription": "{{name}} — {{specialty}} in {{city}}. Ratings, prices, insurance and contact info on MedSociety."
   }
 }

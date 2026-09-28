@@ -4,9 +4,11 @@ import type { Provider } from '../../types/provider';
 import { hueOf } from '../../utils/images';
 import { usePortraitPhoto } from '../../hooks/usePortraitPhoto';
 import { ratingOf, ratingSource } from '../../utils/rating';
+import { formatPrice } from '../../utils/currency';
+import { profileViews } from '../../utils/profileViews';
 import {
     IconStar, IconMapPin, IconChevronRight, IconPromoted,
-    IconVerified, IconClipboard, SpecialtyIcon, CountryIcon,
+    IconVerified, IconClipboard, IconViews, SpecialtyIcon, CountryIcon,
 } from '../icons/Icons';
 
 interface ProviderCardProps {
@@ -27,13 +29,21 @@ interface ProviderCardProps {
      * you nothing about which of 807 rows it belongs to.
      */
     focused?: boolean;
+    /**
+     * Set on the first few above-the-fold rows of a results list so their
+     * thumbnail loads eagerly at high priority instead of waiting on the
+     * lazy-load scheduler every other card uses.
+     */
+    priority?: boolean;
 }
 
 /** Insurers are long names; two is what fits before the row starts lying about the rest. */
 const INSURANCE_CHIPS = 2;
 
-export function ProviderCard({ provider, selected, onClick, distance, onHover, focused = false }: ProviderCardProps) {
-    const { t } = useTranslation();
+export function ProviderCard({
+    provider, selected, onClick, distance, onHover, focused = false, priority = false,
+}: ProviderCardProps) {
+    const { t, i18n } = useTranslation();
     /**
      * A photo that 404s used to hide its own <img> and leave a blank 74px box,
      * because the monogram class was only applied on the no-photo branch. So
@@ -44,9 +54,11 @@ export function ProviderCard({ provider, selected, onClick, distance, onHover, f
      * live Google Places photo when there is no usable `imageUrl` — 1,275 of
      * the 1,390 providers with a googlePlaceId are in exactly that spot, so
      * without this a card showed the specialty icon for a clinic whose own
-     * drawer already had a real photo one click away.
+     * drawer already had a real photo one click away. 'thumb' picks the
+     * size bucket for this card's 74px avatar rather than the full-size
+     * image the drawer's gallery needs.
      */
-    const { url: resolvedUrl } = usePortraitPhoto(provider);
+    const { url: resolvedUrl } = usePortraitPhoto(provider, 'thumb');
     const [broken, setBroken] = useState(false);
     const photo = broken ? undefined : resolvedUrl;
 
@@ -65,6 +77,8 @@ export function ProviderCard({ provider, selected, onClick, distance, onHover, f
 
     const insurances = provider.insurances ?? [];
     const extraInsurers = Math.max(0, insurances.length - INSURANCE_CHIPS);
+    // Placeholder, not measured traffic — see profileViews.ts.
+    const providerViews = profileViews(provider);
 
     return (
         <button
@@ -126,8 +140,22 @@ export function ProviderCard({ provider, selected, onClick, distance, onHover, f
                     <img
                         src={photo}
                         alt=""
-                        loading="lazy"
+                        loading={priority ? 'eager' : 'lazy'}
+                        fetchPriority={priority ? 'high' : 'auto'}
+                        decoding="async"
+                        width={74}
+                        height={74}
+                        className="ms-img-fade"
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        ref={(img) => {
+                            // A cached image is already `complete` and never
+                            // fires a fresh `onLoad` — without this it would
+                            // sit at opacity 0 forever.
+                            if (img && img.complete && img.naturalWidth > 0) {
+                                img.classList.add('is-loaded');
+                            }
+                        }}
+                        onLoad={(e) => e.currentTarget.classList.add('is-loaded')}
                         onError={() => setBroken(true)}
                     />
                 ) : (
@@ -190,6 +218,24 @@ export function ProviderCard({ provider, selected, onClick, distance, onHover, f
                 }}>
                     <RatingBadge provider={provider} />
 
+                    {/*
+                      Placeholder until real view tracking exists — see
+                      profileViews.ts. Sits next to the rating rather than as
+                      its own row so a card that's already this dense doesn't
+                      grow taller just to fit it.
+                    */}
+                    <span style={{
+                        display: 'flex', alignItems: 'center', gap: '0.24rem', flexShrink: 0,
+                        fontSize: '0.78rem', color: 'var(--gray-500)',
+                    }}>
+                        <IconViews size={13} />
+                        {t('card.profileViews', {
+                            count: providerViews,
+                            formatted: providerViews.toLocaleString(i18n.language),
+                            defaultValue: `${providerViews} profile views`,
+                        })}
+                    </span>
+
                     <span style={{
                         display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0,
                         fontSize: '0.82rem', color: 'var(--gray-400)',
@@ -218,8 +264,8 @@ export function ProviderCard({ provider, selected, onClick, distance, onHover, f
                         {provider.priceFromMxn != null && (
                             <Badge bg="var(--gold-dim)" fg="var(--gold)">
                                 {t('card.priceFrom', {
-                                    price: `$${provider.priceFromMxn.toLocaleString()}`,
-                                    defaultValue: `From $${provider.priceFromMxn.toLocaleString()} MXN`,
+                                    price: formatPrice(provider.priceFromMxn, i18n.language),
+                                    defaultValue: `From ${formatPrice(provider.priceFromMxn, i18n.language)}`,
                                 })}
                             </Badge>
                         )}

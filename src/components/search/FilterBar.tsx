@@ -5,6 +5,7 @@ import { SpecialtyLabels } from '../../types/provider';
 import type { FacetCounts } from '../../utils/facets';
 import { topInsurers } from '../../utils/facets';
 import { fold } from '../../utils/search';
+import { formatPrice, isEnglish, MXN_PER_USD } from '../../utils/currency';
 import {
     SpecialtyIcon, IconBorder, IconUS, IconMX,
     IconStar, IconChevronDown, IconSearch,
@@ -28,7 +29,15 @@ const PRIMARY_SPECIALTIES: Specialty[] = [
 ];
 
 const RATINGS = [0, 3, 4, 4.5];
-const PRICE_CEILINGS = [500, 1000, 2000, 5000];
+/**
+ * Ceiling options for the price filter, stored in MXN either way (the URL
+ * param and the filter state are always MXN — see ProviderFilters.maxPriceMxn
+ * — only the label changes with language). Spanish keeps the original MXN
+ * ceilings; English shows round USD ceilings converted to their MXN
+ * equivalent so the stored/compared value is still a single MXN number.
+ */
+const PRICE_CEILINGS_MXN = [500, 1000, 2000, 5000];
+const PRICE_CEILINGS_USD = [25, 50, 100, 250];
 const INSURERS_SHOWN = 12;
 
 /** Toggle a value in or out of a multi-select axis. */
@@ -44,9 +53,13 @@ function toggle<T>(list: T[], value: T): T[] {
  * click it and stare at an empty list.
  */
 export function FilterBar({ filters, updateFilter, patchFilters, facets }: FilterBarProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [showAllTags, setShowAllTags] = useState(false);
     const [insuranceQuery, setInsuranceQuery] = useState('');
+
+    const priceCeilings = isEnglish(i18n.language)
+        ? PRICE_CEILINGS_USD.map((usd) => usd * MXN_PER_USD)
+        : PRICE_CEILINGS_MXN;
 
     const RATING_LABELS: Record<number, string> = {
         0: t('filters.ratingAny'),
@@ -244,10 +257,10 @@ export function FilterBar({ filters, updateFilter, patchFilters, facets }: Filte
                             active={filters.maxPriceMxn == null}
                             onClick={() => updateFilter('maxPriceMxn', null)}
                         />
-                        {PRICE_CEILINGS.map((max) => (
+                        {priceCeilings.map((max) => (
                             <Chip
                                 key={max}
-                                label={`≤ $${max.toLocaleString()}`}
+                                label={`≤ ${formatPrice(max, i18n.language)}`}
                                 active={filters.maxPriceMxn === max}
                                 onClick={() => updateFilter('maxPriceMxn', max)}
                             />

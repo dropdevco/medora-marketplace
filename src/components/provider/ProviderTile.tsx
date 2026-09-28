@@ -3,11 +3,22 @@ import type { Provider } from '../../types/provider';
 import { ratingOf } from '../../utils/rating';
 import { hueOf } from '../../utils/images';
 import { usePortraitPhoto } from '../../hooks/usePortraitPhoto';
-import { IconStar, IconClipboard, SpecialtyIcon } from '../icons/Icons';
+import { formatPrice } from '../../utils/currency';
+import { profileViews } from '../../utils/profileViews';
+import { IconStar, IconClipboard, IconViews, SpecialtyIcon } from '../icons/Icons';
 
 interface ProviderTileProps {
     provider: Provider;
     onClick: (p: Provider) => void;
+    /**
+     * Set on the first handful of above-the-fold tiles (the first couple of
+     * Discover rows) so their image is eagerly fetched at high priority
+     * instead of waiting on the lazy-load/idle scheduler every other tile
+     * uses. Everything below the fold stays lazy — eagerly loading all of
+     * them would just move the contention from "images fight the providers
+     * fetch" to "images fight each other".
+     */
+    priority?: boolean;
 }
 
 /**
@@ -19,14 +30,17 @@ interface ProviderTileProps {
  * clinic's monogram, coloured deterministically from its id. It reads as a
  * designed cover rather than as a missing image.
  */
-export function ProviderTile({ provider, onClick }: ProviderTileProps) {
+export function ProviderTile({ provider, onClick, priority = false }: ProviderTileProps) {
     const rating = ratingOf(provider);
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    // Placeholder, not measured traffic — see profileViews.ts.
+    const providerViews = profileViews(provider);
     // Falls back to a live Google Places photo when there is no usable
     // `imageUrl` — see usePortraitPhoto. Without it, a tile in the Discover
     // rows showed the specialty monogram for a clinic whose own drawer
-    // already had a real photo.
-    const { url: photo } = usePortraitPhoto(provider);
+    // already had a real photo. 'tile' picks the size bucket the resized
+    // Google Places proxy serves for this ~208px-wide slot.
+    const { url: photo } = usePortraitPhoto(provider, 'tile');
     const accent = provider.country === 'MX' ? 'var(--mx)' : 'var(--us)';
     const side = provider.country === 'MX' ? t('drawer.ciudadJuarez') : t('drawer.elPaso');
 
@@ -53,9 +67,22 @@ export function ProviderTile({ provider, onClick }: ProviderTileProps) {
                     <img
                         src={photo}
                         alt=""
-                        loading="lazy"
-                        className="ms-tile-img"
+                        loading={priority ? 'eager' : 'lazy'}
+                        fetchPriority={priority ? 'high' : 'auto'}
+                        decoding="async"
+                        width={400}
+                        height={400}
+                        className="ms-tile-img ms-img-fade"
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        ref={(img) => {
+                            // A cached image is already `complete` by the time
+                            // this ref runs, and never fires a fresh `onLoad` —
+                            // without this it would sit at opacity 0 forever.
+                            if (img && img.complete && img.naturalWidth > 0) {
+                                img.classList.add('is-loaded');
+                            }
+                        }}
+                        onLoad={(e) => e.currentTarget.classList.add('is-loaded')}
                         onError={(e) => {
                             // A dead CDN link would otherwise leave a torn-image
                             // glyph on the cover; drop back to the monogram.
@@ -143,6 +170,19 @@ export function ProviderTile({ provider, onClick }: ProviderTileProps) {
                     {side}
                 </p>
 
+                {/* Placeholder until real view tracking exists — see profileViews.ts. */}
+                <p style={{
+                    fontSize: '0.78rem', color: 'var(--gray-500)',
+                    display: 'flex', alignItems: 'center', gap: '0.3rem',
+                }}>
+                    <IconViews size={12} />
+                    {t('card.profileViews', {
+                        count: providerViews,
+                        formatted: providerViews.toLocaleString(i18n.language),
+                        defaultValue: `${providerViews} profile views`,
+                    })}
+                </p>
+
                 {(provider.priceFromMxn != null || provider.bookingUrl) && (
                     <p style={{
                         marginTop: '0.15rem', fontSize: '0.84rem',
@@ -151,8 +191,8 @@ export function ProviderTile({ provider, onClick }: ProviderTileProps) {
                         {provider.priceFromMxn != null && (
                             <span style={{ fontWeight: 700 }}>
                                 {t('card.priceFrom', {
-                                    price: `$${provider.priceFromMxn.toLocaleString()}`,
-                                    defaultValue: `From $${provider.priceFromMxn.toLocaleString()} MXN`,
+                                    price: formatPrice(provider.priceFromMxn, i18n.language),
+                                    defaultValue: `From ${formatPrice(provider.priceFromMxn, i18n.language)}`,
                                 })}
                             </span>
                         )}
