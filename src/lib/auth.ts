@@ -21,14 +21,20 @@ export async function signIn(email: string, password: string): Promise<AuthResul
     return { error: error?.message ?? null };
 }
 
-export async function signUp(email: string, password: string): Promise<AuthResult> {
+/**
+ * `redirectTo` is where the confirmation link lands. Optional and absolute;
+ * the default is the dashboard. The border-health onboarding passes
+ * `/borderhealth?resume=1` so a confirmed account finishes the claim or
+ * listing it started instead of arriving at an empty portal.
+ */
+export async function signUp(email: string, password: string, redirectTo?: string): Promise<AuthResult> {
     if (!supabase) return { error: NOT_CONFIGURED };
     const { error } = await supabase.auth.signUp({
         email,
         password,
         // Back to the claim flow rather than to the marketing page, so a
         // confirmation click lands where the person was going.
-        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+        options: { emailRedirectTo: redirectTo ?? `${window.location.origin}/dashboard` },
     });
     return { error: error?.message ?? null };
 }

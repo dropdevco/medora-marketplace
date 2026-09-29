@@ -1,0 +1,192 @@
+/* Border health study (/borderhealth).
+   Uses the site tokens from index.css only; mobile-first, readable at 375px,
+   44px+ tap targets on every option. All selectors are prefixed `bh-`. */
+
+.bh-page {
+  min-height: 100vh;
+  padding-top: 68px; /* fixed navbar */
+  background: var(--navy);
+  color: var(--white);
+}
+.bh-wrap {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 0 16px calc(48px + env(safe-area-inset-bottom));
+}
+@media (min-width: 480px) { .bh-wrap { padding-left: 20px; padding-right: 20px; } }
+
+/* header */
+.bh-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 22px 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+.bh-brand { min-width: 0; line-height: 1.3; }
+.bh-brand-eyebrow {
+  display: block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--accent);
+}
+.bh-brand-sub { display: block; font-size: 0.85rem; color: var(--gray-400); margin-top: 2px; }
+.bh-lang {
+  display: flex; flex: none; overflow: hidden;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-pill);
+}
+.bh-lang button {
+  background: transparent; color: var(--gray-300);
+  font-weight: 700; font-size: 0.8rem; letter-spacing: 0.05em;
+  padding: 10px 14px; min-width: 48px; min-height: 40px;
+  -webkit-tap-highlight-color: transparent;
+  transition: var(--transition);
+}
+.bh-lang button + button { border-left: 1px solid var(--border-strong); }
+.bh-lang button[aria-pressed='true'] { background: var(--brand); color: var(--on-brand); }
+
+.bh-main { padding-top: 28px; }
+
+/* screens */
+.bh-screen { animation: bh-in 0.32s var(--ease-out) both; }
+@keyframes bh-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.bh-h1 { font-size: clamp(2.1rem, 8.5vw, 2.9rem); line-height: 1.05; margin-bottom: 0.9rem; }
+.bh-h2 { font-size: clamp(1.75rem, 7vw, 2.2rem); line-height: 1.1; margin-bottom: 1.4rem; }
+.bh-lede { font-size: 1.05rem; color: var(--gray-300); max-width: 46ch; margin-bottom: 1.1rem; line-height: 1.55; }
+.bh-about {
+  font-size: 0.92rem; color: var(--gray-400); max-width: 52ch; line-height: 1.6;
+  margin-bottom: 1.8rem; padding-left: 12px; border-left: 2px solid var(--border);
+}
+.bh-who {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--gray-500); margin-bottom: 0.6rem;
+}
+.bh-segs { display: flex; flex-direction: column; gap: 10px; }
+.bh-seg {
+  width: 100%; text-align: left; display: flex; align-items: center; gap: 14px;
+  padding: 18px 18px; background: var(--surface); color: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  -webkit-tap-highlight-color: transparent;
+  transition: var(--transition), transform 0.12s var(--ease-out);
+}
+.bh-seg:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+.bh-seg:active { transform: scale(0.99); }
+.bh-seg-t { flex: 1; min-width: 0; }
+.bh-seg-t b { display: block; font-size: 1.6rem; line-height: 1.1; color: var(--white); }
+.bh-seg-t small { display: block; font-size: 0.9rem; color: var(--gray-400); margin-top: 4px; line-height: 1.4; }
+.bh-seg svg { flex: none; width: 22px; height: 22px; stroke: var(--accent); }
+.bh-time { margin-top: 1.1rem; font-size: 0.85rem; color: var(--gray-500); }
+
+/* progress */
+.bh-prog { margin-bottom: 1.4rem; }
+.bh-bar { height: 4px; background: var(--surface-hover); border-radius: 4px; overflow: hidden; }
+.bh-bar i {
+  display: block; height: 100%; background: var(--accent); transform-origin: left;
+  transition: transform 0.35s var(--ease-out);
+}
+.bh-prog-lbl {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  font-size: 0.82rem; color: var(--gray-500); margin-top: 8px;
+}
+.bh-prog-lbl b { font-weight: 600; color: var(--gray-300); }
+.bh-sw {
+  background: transparent; color: var(--gray-500); font-size: inherit;
+  padding: 8px 0 8px 8px; min-height: 40px; text-align: right;
+  -webkit-tap-highlight-color: transparent;
+}
+.bh-sw u { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; font-weight: 600; }
+
+.bh-toast {
+  font-size: 0.85rem; color: var(--accent); background: var(--accent-dim);
+  border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 1.2rem;
+}
+
+/* questions */
+.bh-q { margin-bottom: 1.8rem; }
+.bh-q fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.bh-q legend { padding: 0; }
+.bh-lab { display: block; font-weight: 600; font-size: 1.02rem; line-height: 1.4; margin-bottom: 0.6rem; color: var(--white); }
+.bh-opt-tag { font-weight: 400; color: var(--gray-500); font-size: 0.85rem; white-space: nowrap; }
+.bh-hint { font-size: 0.85rem; color: var(--gray-400); margin: -0.3rem 0 0.7rem; }
+.bh-q[data-q='contact'] .bh-hint { margin-top: 0; }
+
+.bh-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.bh-opts.stack { flex-direction: column; }
+.bh-opts.stack .bh-opt { width: 100%; }
+.bh-opt {
+  display: inline-flex; align-items: center; gap: 10px;
+  min-height: 48px; padding: 11px 16px;
+  background: var(--navy); color: var(--white);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  font-size: 0.95rem; line-height: 1.3; text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: var(--transition), transform 0.12s var(--ease-out);
+}
+.bh-opt:hover { background: var(--surface); }
+.bh-opt:active { transform: scale(0.98); }
+.bh-opt[aria-pressed='true'] { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.bh-ck {
+  display: none; flex: none; width: 16px; height: 16px;
+}
+.bh-ck svg { width: 16px; height: 16px; stroke: var(--on-brand); }
+.bh-opt[aria-pressed='true'] .bh-ck { display: block; }
+
+.bh-input {
+  display: block; width: 100%;
+  padding: 0.8rem 0.9rem; min-height: 48px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border-strong);
+  background: var(--navy); color: var(--white);
+  font-family: var(--font-ui); font-size: 16px; /* 16px stops iOS zoom-on-focus */
+  line-height: 1.4;
+  -webkit-appearance: none; appearance: none;
+}
+textarea.bh-input { min-height: 7rem; resize: vertical; }
+.bh-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.bh-other { margin-top: 10px; }
+.bh-cnt { font-size: 0.78rem; color: var(--gray-500); text-align: right; margin-top: 4px; }
+
+.bh-err {
+  display: flex; gap: 7px; align-items: flex-start;
+  font-size: 0.88rem; color: var(--red); margin-top: 8px; line-height: 1.4;
+}
+.bh-err::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--red);
+  flex: none; margin-top: 0.45em;
+}
+.bh-err-top { margin-top: 14px; }
+.bh-q.bad .bh-opt, .bh-q.bad .bh-input { border-color: var(--red); }
+
+.bh-grid2 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 480px) { .bh-grid2 { grid-template-columns: 1fr 1fr; } }
+.bh-field label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--gray-300); margin-bottom: 6px; }
+
+/* nav */
+.bh-nav {
+  display: flex; gap: 12px; align-items: center;
+  margin-top: 2rem; padding-top: 1.4rem; border-top: 1px solid var(--border);
+}
+.bh-btn-pri { flex: 1; min-height: 52px; font-size: 1rem !important; }
+.bh-btn-pri:disabled { opacity: 0.55; cursor: default; }
+.bh-btn-ghost {
+  background: transparent; color: var(--gray-300); font-weight: 600;
+  padding: 0 16px; min-height: 52px; border-radius: var(--radius-pill);
+}
+.bh-btn-ghost:hover { background: var(--surface); color: var(--white); }
+.bh-sendnote { font-size: 0.82rem; color: var(--gray-500); margin-top: 14px; line-height: 1.5; }
+
+/* done */
+.bh-done { padding: 1.5rem 0 0.5rem; }
+.bh-tick {
+  width: 52px; height: 52px; border-radius: 50%; background: var(--brand);
+  display: flex; align-items: center; justify-content: center; margin-bottom: 1.2rem;
+}
+.bh-tick svg { width: 26px; height: 26px; stroke: var(--on-brand); }
+.bh-done .bh-h2 { margin-bottom: 0.7rem; }
+.bh-done p { font-size: 1.05rem; color: var(--gray-300); max-width: 48ch; margin-bottom: 0.8rem; line-height: 1.55; }
+
+.bh-foot {
+  margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border);
+  font-size: 0.8rem; line-height: 1.55; color: var(--gray-500);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bh-screen { animation: none; }
+  .bh-bar i { transition: none; }
+}

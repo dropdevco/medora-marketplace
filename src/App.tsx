@@ -2,10 +2,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
 import { SearchPage } from './pages/SearchPage';
 import { PricingPage } from './pages/PricingPage';
-import { ProviderPage } from './pages/ProviderPage';
 import { LoginPage } from './pages/LoginPage';
 import { ClaimPage } from './pages/ClaimPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { ProviderPage } from './pages/ProviderPage';
+import { BorderhealthPage } from './pages/BorderhealthPage';
 import './index.css';
 
 export default function App() {
@@ -15,10 +16,13 @@ export default function App() {
       <Routes>
         <Route path="/" element={<SearchPage />} />
         <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/providers/:providerId" element={<ProviderPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/claim/:providerId" element={<ClaimPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/providers/:providerId" element={<ProviderPage />} />
+        {/* The border health study, moved here from borderhealth.dropdev.co.
+            Providers who finish it go straight into claiming or listing. */}
+        <Route path="/borderhealth" element={<BorderhealthPage />} />
         {/*
           /sales was the clinic-facing page and is now /pricing. The old path
           is in sent emails and in the lead rows, so it redirects rather than
