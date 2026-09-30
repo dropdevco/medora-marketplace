@@ -136,7 +136,7 @@ function parseFilters(params: URLSearchParams): ProviderFilters {
         minRating: num('rating', 0),
         insurances: params.getAll('ins'),
         languages: params.getAll('lang'),
-        bookableOnly: params.get('book') === '1',
+        bookableOnly: false, // legacy ?book=1 links are ignored: online booking is no longer offered
         verifiedOnly: params.get('verified') === '1',
         withPricing: params.get('priced') === '1',
         maxPriceMxn: params.has('max') ? num('max', 0) : null,
@@ -191,7 +191,6 @@ function serializeFilters(f: ProviderFilters): URLSearchParams {
     for (const l of f.languages) p.append('lang', l);
     if (f.country) p.set('country', f.country);
     if (f.minRating > 0) p.set('rating', String(f.minRating));
-    if (f.bookableOnly) p.set('book', '1');
     if (f.verifiedOnly) p.set('verified', '1');
     if (f.withPricing) p.set('priced', '1');
     if (f.withPricing && f.maxPriceMxn != null) p.set('max', String(f.maxPriceMxn));

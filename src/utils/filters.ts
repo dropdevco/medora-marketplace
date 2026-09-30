@@ -46,7 +46,6 @@ export function countActiveFilters(filters: ProviderFilters): number {
     if (filters.country) n++;
     if (filters.minRating > 0) n++;
     if (filters.postalCode) n++;
-    if (filters.bookableOnly) n++;
     if (filters.verifiedOnly) n++;
     if (filters.withPricing) n++;
     return n;
@@ -135,8 +134,6 @@ export function matchesFilters(
         const held = p.languages ?? [];
         if (!filters.languages.some((l) => held.includes(l))) return false;
     }
-
-    if (!skipped('bookableOnly') && filters.bookableOnly && !p.bookingUrl) return false;
 
     /**
      * Filters on the licence, not on the plan.

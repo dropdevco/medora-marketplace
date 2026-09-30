@@ -1,15 +1,20 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Provider } from '../types/provider';
 import { useSession } from '../hooks/useSession';
 import { useMyClinic } from '../hooks/useMyClinic';
 import { signOut } from '../lib/auth';
+import { supabase } from '../lib/supabase';
 import { estimateViews } from '../utils/estimatedViews';
 import { AuthShell } from '../components/account/AuthShell';
 import { ClinicProfileForm } from '../components/account/ClinicProfileForm';
 import { ClinicPhotoManager } from '../components/account/ClinicPhotoManager';
 import { ClinicPlanPanel } from '../components/account/ClinicPlanPanel';
+import { ClinicAvatar } from '../components/account/ClinicAvatar';
+import { ProfileCompleteness } from '../components/account/ProfileCompleteness';
+import { ToastProvider } from '../components/account/ToastProvider';
+import type { CompletenessTarget } from '../utils/profileCompleteness';
 import { IconViews, IconClipboard, IconStar } from '../components/icons/Icons';
 
 type Tab = 'overview' | 'profile' | 'photos' | 'plan';
@@ -28,12 +33,69 @@ export function DashboardPage() {
     const { owned, claims, loading, reload } = useMyClinic(user?.id ?? null);
     const [tab, setTab] = useState<Tab>('overview');
     const [activeId, setActiveId] = useState<string | null>(null);
+    const [galleryCount, setGalleryCount] = useState(0);
+    // A field to scroll to and focus once the target tab has rendered. `n`
+    // makes asking for the same field twice in a row still fire the effect.
+    const [focusTarget, setFocusTarget] = useState<{ id: string; n: number } | null>(null);
+    // The profile form reports unsaved edits here so leaving its tab (or
+    // switching clinic) can ask first, without lifting the whole draft up.
+    const dirtyRef = useRef(false);
+    const setDirty = useCallback((d: boolean) => { dirtyRef.current = d; }, []);
+
+    const activeClinicId = (owned.find((p) => p.id === activeId) ?? owned[0])?.id ?? null;
+
+    useEffect(() => {
+        if (!supabase || !activeClinicId) return;
+        let cancelled = false;
+        void supabase
+            .from('provider_photos')
+            .select('id', { count: 'exact', head: true })
+            .eq('provider_id', activeClinicId)
+            .then(({ count }) => { if (!cancelled) setGalleryCount(count ?? 0); });
+        return () => { cancelled = true; };
+    }, [activeClinicId]);
+
+    useEffect(() => {
+        if (!focusTarget) return;
+        const id = window.setTimeout(() => {
+            const el = document.getElementById(focusTarget.id);
+            if (!el) return;
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.remove('acct-flash');
+            void el.offsetWidth; // restart the animation if it is still running
+            el.classList.add('acct-flash');
+            const focusable = el.matches('input,textarea,button,select')
+                ? el
+                : el.querySelector<HTMLElement>('input,textarea,button,select');
+            (focusable ?? el).focus({ preventScroll: true });
+        }, 80);
+        return () => window.clearTimeout(id);
+    }, [focusTarget, tab]);
+
+    const confirmLeave = () =>
+        !dirtyRef.current || window.confirm(t('account.unsavedConfirm'));
+
+    const goTab = (next: Tab) => {
+        if (next === tab) return;
+        if (tab === 'profile' && !confirmLeave()) return;
+        dirtyRef.current = false;
+        setTab(next);
+    };
+
+    const goTo = (target: CompletenessTarget) => {
+        if (target.tab !== tab && tab === 'profile' && !confirmLeave()) return;
+        if (target.tab !== tab) dirtyRef.current = false;
+        setTab(target.tab);
+        if (target.field) setFocusTarget((prev) => ({ id: target.field!, n: (prev?.n ?? 0) + 1 }));
+    };
 
     if (!sessionLoading && !user) {
         return <Navigate to="/login?next=/dashboard" replace />;
     }
 
-    if (sessionLoading || loading) {
+    // `loading` flips true on every reload (after a save); only the first load
+    // should replace the page, or an unsaved form would be torn down under the user.
+    if (sessionLoading || (loading && owned.length === 0 && claims.length === 0)) {
         return <AuthShell title={t('account.loading')} />;
     }
 
@@ -65,13 +127,18 @@ export function DashboardPage() {
     const clinic = owned.find((p) => p.id === activeId) ?? owned[0];
 
     return (
+        <ToastProvider>
         <AuthShell wide title={clinic.name} subtitle={t('account.dashboardSubtitle')}>
             {/* Most clinics own one listing; a group owns several. The picker
                 only earns its space in the second case. */}
             {owned.length > 1 && (
                 <select
                     value={clinic.id}
-                    onChange={(e) => setActiveId(e.target.value)}
+                    onChange={(e) => {
+                        if (tab === 'profile' && !confirmLeave()) return;
+                        dirtyRef.current = false;
+                        setActiveId(e.target.value);
+                    }}
                     style={{ marginBottom: '1.25rem' }}
                     aria-label={t('account.switchClinic')}
                 >
@@ -79,20 +146,25 @@ export function DashboardPage() {
                 </select>
             )}
 
-            <Link
-                to={`/providers/${clinic.id}`}
-                className="press"
-                style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                    marginBottom: '1.25rem', padding: '0.5rem 0.95rem',
-                    borderRadius: 'var(--radius-pill)', border: '1px solid var(--border)',
-                    background: 'var(--surface)', color: 'var(--white)',
-                    fontSize: '0.85rem', fontWeight: 700,
-                }}
-            >
-                <IconViews size={15} />
-                {t('account.viewPublic')}
-            </Link>
+            <div className="acct-header">
+                <button
+                    type="button"
+                    className="acct-header-avatar"
+                    onClick={() => goTo({ tab: 'profile', field: 'acct-avatar' })}
+                    aria-label={t('account.avatarChange')}
+                    title={t('account.avatarChange')}
+                >
+                    <ClinicAvatar src={clinic.imageUrl} name={clinic.name} size={52} />
+                </button>
+                <div className="acct-header-text">
+                    <strong>{clinic.name}</strong>
+                    <span>{clinic.city}</span>
+                </div>
+                <Link to={`/providers/${clinic.id}`} className="press acct-viewpublic">
+                    <IconViews size={15} />
+                    {t('account.viewPublic')}
+                </Link>
+            </div>
 
             <div
                 role="tablist"
@@ -106,7 +178,7 @@ export function DashboardPage() {
                         key={key}
                         role="tab"
                         aria-selected={tab === key}
-                        onClick={() => setTab(key)}
+                        onClick={() => goTab(key)}
                         style={{
                             background: 'none',
                             padding: '0.6rem 0.85rem',
@@ -122,22 +194,37 @@ export function DashboardPage() {
                 ))}
             </div>
 
-            {tab === 'overview' && <Overview clinic={clinic} />}
-            {tab === 'profile' && <ClinicProfileForm clinic={clinic} onSaved={reload} />}
-            {tab === 'photos' && <ClinicPhotoManager clinic={clinic} />}
+            {tab === 'overview' && <Overview clinic={clinic} galleryCount={galleryCount} onGo={goTo} />}
+            {tab === 'profile' && (
+                <ClinicProfileForm key={clinic.id} clinic={clinic} onSaved={reload} onDirtyChange={setDirty} />
+            )}
+            {tab === 'photos' && (
+                <ClinicPhotoManager
+                    key={clinic.id}
+                    clinic={clinic}
+                    onCountChange={setGalleryCount}
+                    onGoToProfile={() => goTo({ tab: 'profile', field: 'acct-avatar' })}
+                />
+            )}
             {tab === 'plan' && <ClinicPlanPanel clinic={clinic} />}
 
             <SignOutRow />
         </AuthShell>
+        </ToastProvider>
     );
 }
 
-function Overview({ clinic }: { clinic: Provider }) {
+function Overview({ clinic, galleryCount, onGo }: {
+    clinic: Provider;
+    galleryCount: number;
+    onGo: (target: CompletenessTarget) => void;
+}) {
     const { t } = useTranslation();
     const { views, contacts } = estimateViews(clinic);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <ProfileCompleteness clinic={clinic} galleryCount={galleryCount} onGo={onGo} />
             <div
                 style={{
                     display: 'grid',

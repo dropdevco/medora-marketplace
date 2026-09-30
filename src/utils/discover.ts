@@ -112,12 +112,6 @@ const CANDIDATES: Candidate[] = [
         match: (p) => p.priceFromMxn != null,
     },
     {
-        id: 'books-online',
-        titleKey: 'discover.booksOnline',
-        filters: { bookableOnly: true },
-        match: (p) => Boolean(p.bookingUrl),
-    },
-    {
         id: 'womens-health',
         titleKey: 'discover.womensHealth',
         filters: { specialty: ['obgyn'] },

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { ProviderFilters, Specialty } from '../../types/provider';
 import type { FacetCounts } from '../../utils/facets';
 import {
-    IconSliders, IconStar, IconClipboard, IconVerified,
+    IconSliders, IconStar, IconVerified,
     IconMX, IconUS, SpecialtyIcon,
 } from '../icons/Icons';
 import { ScrollRail } from './ScrollRail';
@@ -75,14 +75,6 @@ export function FilterChipRow({
                 label={t('filters.rating45')}
                 on={filters.minRating === 4.5}
                 onClick={() => updateFilter('minRating', filters.minRating === 4.5 ? 0 : 4.5)}
-            />
-
-            <Chip
-                icon={<IconClipboard size={14} weight={2} />}
-                label={t('filters.bookable')}
-                on={filters.bookableOnly}
-                count={facets.bookable}
-                onClick={() => updateFilter('bookableOnly', !filters.bookableOnly)}
             />
 
             <Chip

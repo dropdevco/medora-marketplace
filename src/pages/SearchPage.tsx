@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef, lazy, Suspense, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useTranslation } from 'react-i18next';
 import { useProviders } from '../hooks/useProviders';
@@ -68,6 +68,7 @@ function readAutoSearch(): boolean {
 export function SearchPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const location = useLocation();
     const {
         providers, allProviders, filters, updateFilter, patchFilters, resetFilters,
         facets, vocabulary, loading,
@@ -238,8 +239,10 @@ export function SearchPage() {
      */
     const handleSelect = useCallback((p: Provider) => {
         trackProviderClick(p);
-        navigate(`/providers/${p.id}`);
-    }, [navigate]);
+        // `backgroundLocation` opens the profile as a modal over this page
+        // (which stays mounted) instead of replacing it; see App.tsx.
+        navigate(`/providers/${p.id}`, { state: { backgroundLocation: location } });
+    }, [navigate, location]);
 
     /**
      * A pin's "full details" was clicked. Same navigation as any other result:

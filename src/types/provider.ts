@@ -57,6 +57,17 @@ export interface ProviderService {
   isFrom?: boolean;
 }
 
+export interface ProviderSocials {
+  facebook?: string;
+  instagram?: string;
+  tiktok?: string;
+  youtube?: string;
+  x?: string;
+  linkedin?: string;
+  /** https://wa.me/<digits> */
+  whatsapp?: string;
+}
+
 export interface Provider {
   id: string;
   name: string;
@@ -114,6 +125,10 @@ export interface Provider {
   /** MX postal code or US ZIP, extracted from `address` by backfill-postal.ts. */
   postalCode?: string;
   imageUrl?: string;
+  /** Social profiles, full https URLs, keys omitted when unknown. */
+  socials?: ProviderSocials;
+  /** Extra photos the provider published (Doctoralia gallery), in display order. */
+  galleryUrls?: string[];
   /** Published services and prices, denormalised by backfill-services.ts. */
   services?: ProviderService[];
   /** Cheapest priced service, denormalised so sorting never walks `services`. */

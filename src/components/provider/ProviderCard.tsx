@@ -8,7 +8,7 @@ import { formatPrice } from '../../utils/currency';
 import { profileViews } from '../../utils/profileViews';
 import {
     IconStar, IconMapPin, IconChevronRight, IconPromoted,
-    IconVerified, IconClipboard, IconViews, SpecialtyIcon, CountryIcon,
+    IconVerified, IconViews, SpecialtyIcon, CountryIcon,
 } from '../icons/Icons';
 
 interface ProviderCardProps {
@@ -256,7 +256,7 @@ export function ProviderCard({
                     )}
                 </div>
 
-                {(provider.priceFromMxn != null || provider.bookingUrl || insurances.length > 0) && (
+                {(provider.priceFromMxn != null || insurances.length > 0) && (
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: '0.35rem',
                         flexWrap: 'nowrap', overflow: 'hidden',
@@ -267,12 +267,6 @@ export function ProviderCard({
                                     price: formatPrice(provider.priceFromMxn, i18n.language),
                                     defaultValue: `From ${formatPrice(provider.priceFromMxn, i18n.language)}`,
                                 })}
-                            </Badge>
-                        )}
-                        {provider.bookingUrl && (
-                            <Badge bg="var(--surface)" fg="var(--gray-300)">
-                                <IconClipboard size={11} weight={2} />
-                                {t('filters.bookable', { defaultValue: 'Books online' })}
                             </Badge>
                         )}
                         {insurances.slice(0, INSURANCE_CHIPS).map((name) => (

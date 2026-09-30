@@ -163,13 +163,6 @@ export function FilterSummary({
                         />
                     )}
 
-                    {filters.bookableOnly && (
-                        <FilterChip
-                            label={t('filters.bookable', { defaultValue: 'Books online' })}
-                            onRemove={drop('bookableOnly', false)}
-                        />
-                    )}
-
                     {filters.verifiedOnly && (
                         <FilterChip
                             label={t('filters.verified', { defaultValue: 'Verified credentials' })}

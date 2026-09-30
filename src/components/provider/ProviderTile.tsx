@@ -5,7 +5,7 @@ import { hueOf } from '../../utils/images';
 import { usePortraitPhoto } from '../../hooks/usePortraitPhoto';
 import { formatPrice } from '../../utils/currency';
 import { profileViews } from '../../utils/profileViews';
-import { IconStar, IconClipboard, IconViews, SpecialtyIcon } from '../icons/Icons';
+import { IconStar, IconViews, SpecialtyIcon } from '../icons/Icons';
 
 interface ProviderTileProps {
     provider: Provider;
@@ -183,7 +183,7 @@ export function ProviderTile({ provider, onClick, priority = false }: ProviderTi
                     })}
                 </p>
 
-                {(provider.priceFromMxn != null || provider.bookingUrl) && (
+                {provider.priceFromMxn != null && (
                     <p style={{
                         marginTop: '0.15rem', fontSize: '0.84rem',
                         display: 'flex', alignItems: 'center', gap: '0.45rem',
@@ -194,15 +194,6 @@ export function ProviderTile({ provider, onClick, priority = false }: ProviderTi
                                     price: formatPrice(provider.priceFromMxn, i18n.language),
                                     defaultValue: `From ${formatPrice(provider.priceFromMxn, i18n.language)}`,
                                 })}
-                            </span>
-                        )}
-                        {provider.bookingUrl && (
-                            <span style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-                                color: 'var(--gray-500)', fontSize: '0.78rem', fontWeight: 600,
-                            }}>
-                                <IconClipboard size={12} weight={2} />
-                                {t('filters.bookable')}
                             </span>
                         )}
                     </p>

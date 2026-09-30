@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
 import { SearchPage } from './pages/SearchPage';
 import { PricingPage } from './pages/PricingPage';
@@ -7,13 +7,38 @@ import { ClaimPage } from './pages/ClaimPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProviderPage } from './pages/ProviderPage';
 import { BorderhealthPage } from './pages/BorderhealthPage';
+import { ProviderModal } from './components/provider/ProviderModal';
 import './index.css';
 
-export default function App() {
+/**
+ * A refresh keeps `history.state`, so a reload on a modal URL would reopen the
+ * modal over its background page. A reload (like a shared link) should show
+ * the full provider page instead, so the background reference is dropped once,
+ * before the router reads the state.
+ */
+try {
+  const st = window.history.state;
+  if (st?.usr?.backgroundLocation) {
+    window.history.replaceState({ ...st, usr: { ...st.usr, backgroundLocation: undefined } }, '');
+  }
+} catch { /* history unavailable, nothing to strip */ }
+
+interface BackgroundState { backgroundLocation?: ReturnType<typeof useLocation> }
+
+/**
+ * "Background location" routing: opening a provider from a list navigates to
+ * /providers/:id with the current location in state. The main <Routes> keeps
+ * rendering that background page (so it stays mounted: results, filters, map
+ * camera and scroll are untouched) while the second <Routes> layers the modal
+ * on top. With no background (direct visit, refresh, shared link) the full
+ * ProviderPage route below renders as before.
+ */
+function AppRoutes() {
+  const location = useLocation();
+  const background = (location.state as BackgroundState | null)?.backgroundLocation;
   return (
-    <BrowserRouter>
-      <Navbar />
-      <Routes>
+    <>
+      <Routes location={background || location}>
         <Route path="/" element={<SearchPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -34,6 +59,20 @@ export default function App() {
             only sensible place to land. */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      {background && (
+        <Routes>
+          <Route path="/providers/:providerId" element={<ProviderModal />} />
+        </Routes>
+      )}
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Navbar />
+      <AppRoutes />
     </BrowserRouter>
   );
 }

@@ -17,12 +17,14 @@ export function normalizeProvider(row: any): Provider {
         imageUrl:      row.imageUrl      ?? row.imageurl      ?? undefined,
         bookingUrl:    row.bookingUrl    ?? row.bookingurl    ?? undefined,
         postalCode:    row.postalCode    ?? row.postalcode    ?? undefined,
+        socials:       row.socials       ?? {},
+        galleryUrls:   row.galleryUrls   ?? row.galleryurls   ?? [],
         services:      row.services      ?? [],
         priceFromMxn:  row.priceFromMxn  ?? row.pricefrommxn  ?? undefined,
         featuredRank:  row.featuredRank  ?? row.featuredrank  ?? undefined,
         tier:          row.tier ?? 'basic',
         licensed:      row.licensed ?? false,
-        languagesConfirmed: row.languagesConfirmed ?? row.languagesconfirmed ?? false,
+        languagesConfirmed: row.languagesConfirmed ?? row.languages_confirmed ?? row.languagesconfirmed ?? false,
         // Trimmed here, once, so the insurance facet groups "GNP " with "GNP"
         // instead of offering both as separate options.
         insurances: (row.insurances ?? [])

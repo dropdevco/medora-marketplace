@@ -222,12 +222,6 @@ export function FilterBar({ filters, updateFilter, patchFilters, facets }: Filte
             <Section title={t('filters.availabilityGroup', { defaultValue: 'Availability' })}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                     <CheckRow
-                        label={t('filters.bookable', { defaultValue: 'Books online' })}
-                        count={facets.bookable}
-                        checked={filters.bookableOnly}
-                        onChange={() => updateFilter('bookableOnly', !filters.bookableOnly)}
-                    />
-                    <CheckRow
                         label={t('filters.verified', { defaultValue: 'Verified credentials' })}
                         count={facets.verified}
                         checked={filters.verifiedOnly}

@@ -18,7 +18,6 @@ export interface FacetCounts {
     insurance: Map<string, number>;
     language: Map<string, number>;
     /** Results that would remain if only this toggle were added. */
-    bookable: number;
     verified: number;
     withPricing: number;
 }
@@ -31,7 +30,6 @@ export function buildFacets(
     const specialty = new Map<Specialty, number>();
     const insurance = new Map<string, number>();
     const language = new Map<string, number>();
-    let bookable = 0;
     let verified = 0;
     let withPricing = 0;
 
@@ -47,12 +45,11 @@ export function buildFacets(
         if (matchesFilters(p, filters, ctx, 'languages')) {
             for (const l of p.languages ?? []) bump(language, l);
         }
-        if (matchesFilters(p, filters, ctx, 'bookableOnly') && p.bookingUrl) bookable++;
         if (matchesFilters(p, filters, ctx, 'verifiedOnly') && p.licensed) verified++;
         if (matchesFilters(p, filters, ctx, 'withPricing') && p.priceFromMxn != null) withPricing++;
     }
 
-    return { specialty, insurance, language, bookable, verified, withPricing };
+    return { specialty, insurance, language, verified, withPricing };
 }
 
 /** Insurers most worth offering first, since there are far too many to list. */

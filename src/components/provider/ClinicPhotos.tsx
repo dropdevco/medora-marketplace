@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGooglePhotos } from '../../hooks/useGooglePhotos';
 import { PhotoLightbox, type LightboxPhoto } from './PhotoLightbox';
@@ -11,10 +11,20 @@ import { PhotoLightbox, type LightboxPhoto } from './PhotoLightbox';
  * expire. Fetching on open (and caching for the session) keeps us inside the
  * terms and avoids serving broken images.
  */
-export function ClinicPhotos({ placeId, portrait }: { placeId?: string; portrait?: string }) {
+export function ClinicPhotos({ placeId, portrait, galleryUrls }: {
+    placeId?: string;
+    portrait?: string;
+    /** Photos the provider published elsewhere (Doctoralia gallery); merged after the Google ones. */
+    galleryUrls?: string[];
+}) {
     const { t } = useTranslation();
     const { photos: googlePhotos, loading } = useGooglePhotos(placeId);
     const [open, setOpen] = useState<number | null>(null);
+    /** URLs that failed to load — dropped from the strip and the lightbox so no broken tile shows. */
+    const [broken, setBroken] = useState<ReadonlySet<string>>(() => new Set());
+    const markBroken = useCallback((url: string) => {
+        setBroken((prev) => (prev.has(url) ? prev : new Set(prev).add(url)));
+    }, []);
 
     /**
      * The provider's own portrait leads, when it has a real one.
@@ -26,10 +36,19 @@ export function ClinicPhotos({ placeId, portrait }: { placeId?: string; portrait
      * "pictures on the detail page but not the card" complaint seen from the
      * other side.
      */
-    const photos: LightboxPhoto[] = useMemo(
-        () => (portrait ? [{ url: portrait }, ...googlePhotos] : googlePhotos),
-        [portrait, googlePhotos],
-    );
+    const photos: LightboxPhoto[] = useMemo(() => {
+        const merged: LightboxPhoto[] = [
+            ...(portrait ? [{ url: portrait }] : []),
+            ...googlePhotos,
+            ...(galleryUrls ?? []).filter(Boolean).map((url) => ({ url })),
+        ];
+        const seen = new Set<string>();
+        return merged.filter((p) => {
+            if (seen.has(p.url) || broken.has(p.url)) return false;
+            seen.add(p.url);
+            return true;
+        });
+    }, [portrait, googlePhotos, galleryUrls, broken]);
 
     // Nothing to show and nothing pending — render no heading at all rather
     // than an empty section.
@@ -83,8 +102,10 @@ export function ClinicPhotos({ placeId, portrait }: { placeId?: string; portrait
                                     src={photo.url}
                                     alt={`${t('drawer.photoAlt')} ${i + 1}`}
                                     loading="lazy"
+                                    decoding="async"
+                                    onError={() => markBroken(photo.url)}
                                     style={{
-                                        width: 148, height: 104,
+                                        width: 148, height: 104, aspectRatio: '148 / 104',
                                         objectFit: 'cover', borderRadius: 'var(--radius)',
                                         background: 'var(--gray-100, rgba(128,128,128,0.12))',
                                     }}
