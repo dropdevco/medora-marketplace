@@ -113,6 +113,35 @@ Both require the Google result to sit within 250m of the scraped coordinates
 and clear a 0.6 name-similarity bar. `apply` only ever fills blanks — it never
 overwrites a phone or website already on a providers row.
 
+## Media & socials backfill
+
+Photo galleries, the practice's own website and social links, taken from the
+profile pages we already cached (`.cache/` holds all ~2,800 profiles, so this
+needs **no network**). Needs `providers.socials` and `providers."galleryUrls"`
+(migration `0008_provider_media_socials.sql`).
+
+```bash
+npx tsx scripts/doctoralia/media-selftest.ts                       # parser checks
+npx tsx scripts/doctoralia/backfill-media.ts --offline --limit=25  # sample, cache only
+npx tsx scripts/doctoralia/backfill-media.ts --offline             # all cached profiles (~8 min CPU)
+npx tsx scripts/doctoralia/load-media.ts                           # DRY RUN: counts only
+npx tsx scripts/doctoralia/load-media.ts --apply                   # write to providers
+```
+
+`backfill-media.ts` is resumable (skips ids already in `out/media.jsonl`;
+`--refetch` redoes everything and ignores the cache, which means live requests).
+Without `--offline`, any page missing from the cache is fetched through the same
+throttled `politeGet`: 2.5-4s apart, single-threaded, no proxies, none of the
+robots.txt-disallowed paths. The ToS and personal-data notes above apply
+unchanged. `load-media.ts` only fills blanks: `website` when empty, missing
+`socials` keys, `galleryUrls` when empty, and never rows with `source = 'self'`.
+
+Where the data lives on the page: gallery in `<gallery-app :media="[...]">`
+(full list; video entries skipped), website in `data-avo-track="doctor-website-link"`
+/ `"clinic-website-link"`, socials in `"clinic-social-media-link"` (clinic pages
+only) or an embedded Instagram post. Doctoralia's og:image banner and its own
+social accounts and share links are excluded.
+
 ## How dedupe works
 
 The existing 335 Juárez rows are Google Places *businesses*; most Doctoralia
@@ -195,4 +224,8 @@ actual usage — watch it in Cloud Console > Billing > Reports.
 | `schema-003-google-sweep.sql` | `google_places_juarez` table |
 | `schema-004-provider-extras.sql` | `providers.insurances` + `providers.bookingUrl` |
 | `backfill-extras.ts` | fills those two from the scrape |
+| `parse-media.ts` | Pure gallery / website / socials extractor |
+| `media-selftest.ts` | Fixtures for `parse-media.ts` |
+| `backfill-media.ts` | Cache (or throttled live) -> `out/media.jsonl` |
+| `load-media.ts` | `media.jsonl` -> providers, dry run by default |
 | `repair-coords.ts` | fixes providers promoted with an out-of-region address |
