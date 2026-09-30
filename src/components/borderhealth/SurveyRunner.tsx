@@ -12,6 +12,7 @@ import {
 } from './logic';
 import type { ErrKind, Errors } from './logic';
 import { getRef, getSession, insertResponse, newSubmissionKey, pushLead } from './submit';
+import { track } from './track';
 import type { BhLang, BhSegment, BhSubmission } from './types';
 
 const SEGS: BhSegment[] = ['employer', 'employee', 'provider'];
@@ -57,6 +58,10 @@ function initialState(search: string, useUrlSeg: boolean): { s: State; restored:
 /** Seconds from the first screen to now (called only from the send handler). */
 function elapsedSeconds(startedAt: number | null): number | null {
     return startedAt ? (Date.now() - startedAt) / 1000 : null;
+}
+
+function msSince(t: number): number {
+    return t ? Date.now() - t : 0;
 }
 
 function scrollTop() {
@@ -106,6 +111,34 @@ export function SurveyRunner({ lang, useUrlSeg, onSubmitted }: {
         saveDraft({ seg: S.seg, step: S.step, a: S.a, startedAt: S.startedAt || Date.now() });
     }, [S, boot]);
 
+    const startedRef = useRef(false);
+    const doneRef = useRef(false);
+    const stepEnteredRef = useRef(0);
+    const liveRef = useRef({ seg: S.seg, step: S.step, lang });
+    useEffect(() => {
+        liveRef.current = { seg: S.seg, step: S.step, lang };
+    }, [S.seg, S.step, lang]);
+
+    useEffect(() => {
+        if (!S.seg) return;
+        stepEnteredRef.current = Date.now();
+        track('step_view', {
+            form_segment: S.seg, lang: liveRef.current.lang, step: S.step,
+            step_id: `${S.seg}-${S.step + 1}`, props: { restored: boot.restored },
+        });
+    }, [S.seg, S.step, boot.restored]);
+
+    useEffect(() => {
+        const onHide = () => {
+            const { seg: sg, step: st, lang: lg } = liveRef.current;
+            if (!startedRef.current || doneRef.current || !sg) return;
+            track('abandon', { form_segment: sg, lang: lg, step: st, step_id: `${sg}-${st + 1}` });
+            startedRef.current = false;
+        };
+        window.addEventListener('pagehide', onHide);
+        return () => window.removeEventListener('pagehide', onHide);
+    }, []);
+
     const go = (next: Partial<State>) => {
         setS((prev) => ({ ...prev, ...next }));
         setErrors({});
@@ -115,6 +148,7 @@ export function SurveyRunner({ lang, useUrlSeg, onSubmitted }: {
     };
 
     const toChooser = (dropSegParam: boolean) => {
+        if (S.seg) track('segment_changed', { form_segment: S.seg, lang, step: S.step });
         clearDraft();
         submissionKeyRef.current = null;
         go({ seg: null, step: 0, a: {}, startedAt: null });
@@ -140,6 +174,8 @@ export function SurveyRunner({ lang, useUrlSeg, onSubmitted }: {
                             className="bh-seg"
                             onClick={() => {
                                 submissionKeyRef.current = null;
+                                startedRef.current = false;
+                                track('segment_selected', { form_segment: k, lang });
                                 go({ seg: k, step: 0, a: {}, startedAt: Date.now() });
                             }}
                         >
@@ -168,6 +204,10 @@ export function SurveyRunner({ lang, useUrlSeg, onSubmitted }: {
 
     const setA = (patch: Answers, drop: string[] = []) => {
         submissionKeyRef.current = null; // answers changed: a new send is a new submission
+        if (!startedRef.current) {
+            startedRef.current = true;
+            track('first_answer', { form_segment: seg, lang, step, step_id: `${seg}-${step + 1}` });
+        }
         setS((prev) => {
             const na: Answers = { ...prev.a, ...patch };
             drop.forEach((k) => { delete na[k]; });
@@ -213,6 +253,10 @@ export function SurveyRunner({ lang, useUrlSeg, onSubmitted }: {
         const { errors: errs, order } = validateScreen(seg, a, scr);
         setErrors(errs);
         if (order.length) {
+            track('validation_error', {
+                form_segment: seg, lang, step, step_id: `${seg}-${step + 1}`,
+                props: { fields: order.slice(0, 10) },
+            });
             requestAnimationFrame(() => {
                 const box = rootRef.current?.querySelector<HTMLElement>(`[data-q="${order[0]}"]`);
                 if (!box) return;
@@ -222,6 +266,10 @@ export function SurveyRunner({ lang, useUrlSeg, onSubmitted }: {
             });
             return;
         }
+        track('step_next', {
+            form_segment: seg, lang, step, step_id: `${seg}-${step + 1}`,
+            props: { ms_on_step: msSince(stepEnteredRef.current) },
+        });
         if (!last) { go({ step: step + 1 }); return; }
         await send();
     };
@@ -239,6 +287,8 @@ export function SurveyRunner({ lang, useUrlSeg, onSubmitted }: {
         if (!submissionKeyRef.current) submissionKeyRef.current = newSubmissionKey();
         const submissionKey = submissionKeyRef.current;
         const phoneOrWa = str(a, 'c_phone') || str(a, 'c_whatsapp');
+        const tf = { form_segment: seg, lang, step, step_id: `${seg}-${step + 1}`, submission_key: submissionKey };
+        track('submit_attempt', tf);
 
         try {
             await insertResponse({
@@ -250,11 +300,17 @@ export function SurveyRunner({ lang, useUrlSeg, onSubmitted }: {
                 follow_up: followed ? true : (a.follow_up === 'no' ? false : null),
                 duration_s: elapsedSeconds(S.startedAt),
             });
-        } catch {
+        } catch (e) {
+            track('submit_error', { ...tf, props: { message: String((e as Error)?.message ?? e).slice(0, 200) } });
             setSending(false);
             setSendErr(true);
             return;
         }
+        doneRef.current = true;
+        track('submit_success', {
+            ...tf,
+            props: { duration_s: elapsedSeconds(S.startedAt), follow_up: followed, has_email: filled(a.c_email), has_phone: filled(a.c_phone), has_whatsapp: filled(a.c_whatsapp) },
+        });
 
         if (filled(a.c_email) || filled(a.c_phone) || filled(a.c_whatsapp)) {
             pushLead({
@@ -294,6 +350,7 @@ export function SurveyRunner({ lang, useUrlSeg, onSubmitted }: {
 
         clearDraft();
         submissionKeyRef.current = null;
+        startedRef.current = false;
         setSending(false);
         setS({ seg: null, step: 0, a: {}, startedAt: null });
         scrollTop();

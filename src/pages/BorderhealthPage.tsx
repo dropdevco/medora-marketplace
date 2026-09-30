@@ -6,8 +6,11 @@ import { BorderhealthOnboarding, BorderhealthResume } from '../components/border
 import { T } from '../components/borderhealth/strings';
 import { pickLang, saveLang } from '../components/borderhealth/storage';
 import { authButton } from '../components/account/authStyles';
+import { track } from '../components/borderhealth/track';
 import type { BhLang } from '../components/borderhealth/types';
 import '../components/borderhealth/borderhealth.css';
+
+let viewSent = false;
 
 /**
  * /borderhealth — the border health access study (employer / employee /
@@ -50,6 +53,27 @@ export function BorderhealthPage() {
             document.title = prevTitle;
         };
     }, []);
+
+    // One page_view per load (the module flag survives StrictMode's double mount).
+    useEffect(() => {
+        if (viewSent) return;
+        viewSent = true;
+        const seg = (new URLSearchParams(window.location.search).get('seg') || '').toLowerCase();
+        track('page_view', {
+            form_segment: seg === 'employer' || seg === 'employee' || seg === 'provider' ? seg : null,
+            lang: langRef.current,
+            props: { listing, resuming },
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const prevLang = useRef(lang);
+    useEffect(() => {
+        if (prevLang.current !== lang) {
+            track('lang_switch', { lang, props: { from: prevLang.current } });
+            prevLang.current = lang;
+        }
+    }, [lang]);
 
     // Persist the choice, title the tab, and keep the site navbar in step.
     useEffect(() => {

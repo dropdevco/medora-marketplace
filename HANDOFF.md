@@ -252,3 +252,20 @@ cat graphify-out/GRAPH_REPORT.md
 The graph was refreshed at commit `acc6da7` (this same commit) via `graphify update .` — 688 nodes, 1207 edges. Run `git rev-parse HEAD` and compare to whatever commit `graphify-out/GRAPH_REPORT.md` says it was built from before trusting it deeply; if HEAD has moved since, run `graphify update .` again first.
 
 **Best first questions to ask the graph once it's fresh:** *"What does `Provider` connect to, and which components would break if I changed its shape?"* (still the single highest-degree node — see the `normalizeProvider()` gotcha in section 7) and *"What calls `applyFilters`/`buildFacets`, and what would break if their signature changed?"* (the new choke point introduced by the redesign — nearly every `search/` component and `SearchPage.tsx` itself depends on it).
+
+## Form links and analytics (/borderhealth)
+
+Six forms = 3 audiences x 2 languages, all the same MedSociety page (no external forms):
+
+    https://medsociety.one/borderhealth?seg=employer&lang=en   (and lang=es)
+    https://medsociety.one/borderhealth?seg=employee&lang=en   (and lang=es)
+    https://medsociety.one/borderhealth?seg=provider&lang=en   (and lang=es)
+
+Optional params: `&by=<name>` (who shared it; shows up in the source report),
+`&utm_source=...&utm_campaign=...`, `&session=test` (dry run, excluded from all numbers).
+
+Tracking: src/components/borderhealth/track.ts -> api/form-event.ts -> table `form_events`
+(migration 0010). Needs SUPABASE_SERVICE_ROLE_KEY (and optionally FORM_EVENT_SALT) in Vercel.
+Read it: `npx tsx --env-file=.env.local scripts/form-stats.ts [daily|sources|audience|visitors|events]`
+or the views form_summary, form_step_funnel, form_daily, form_by_source, form_audience,
+form_visitors, form_visits in the Supabase SQL editor. Finished submissions stay in `bh_responses`.
