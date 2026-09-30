@@ -359,6 +359,7 @@
     "evidenceHint": "Un correo del dominio de la clínica, una cédula profesional, o el teléfono que ya aparece en el perfil.",
     "evidencePlaceholder": "Soy la gerente del consultorio. El teléfono de este perfil es mi línea directa y mi correo es de nuestro dominio.",
     "dashboardSubtitle": "Todo lo de tu perfil, y lo que incluye tu plan.",
+    "viewPublic": "Ver como lo ven los pacientes",
     "switchClinic": "Cambiar de clínica",
     "noClinicTitle": "Todavía no tienes clínica",
     "noClinicBody": "Busca tu consultorio en el directorio y reclámalo. Toma un minuto y no cuesta nada.",

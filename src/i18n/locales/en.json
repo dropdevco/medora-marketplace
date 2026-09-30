@@ -359,6 +359,7 @@
     "evidenceHint": "A work email on the clinic’s domain, a cédula profesional, or the phone number already on the listing.",
     "evidencePlaceholder": "I am the office manager. Our phone on this listing is my direct line, and my email is on our domain.",
     "dashboardSubtitle": "Everything on your listing, and what your plan includes.",
+    "viewPublic": "View as patients see it",
     "switchClinic": "Switch clinic",
     "noClinicTitle": "No clinic yet",
     "noClinicBody": "Find your practice in the directory and claim it. It takes a minute and it costs nothing.",

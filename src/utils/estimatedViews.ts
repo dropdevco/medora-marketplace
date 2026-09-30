@@ -1,4 +1,5 @@
 import type { Provider } from '../types/provider';
+import { isNewListing } from './profileViews';
 
 /**
  * A modelled estimate of how much attention a listing is getting.
@@ -43,6 +44,10 @@ export interface ViewEstimate {
 }
 
 export function estimateViews(p: Provider): ViewEstimate {
+    // A listing created through the sign-up form has no history: nobody has
+    // seen it yet, so no modelled baseline either.
+    if (isNewListing(p)) return { views: 0, contacts: 0 };
+
     // Review count is the only real demand signal we hold: a clinic with eight
     // hundred reviews genuinely is searched for more than one with four. The
     // log keeps the top of the range plausible rather than letting the busiest

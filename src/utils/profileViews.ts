@@ -30,7 +30,17 @@ function hash(id: string): number {
     return h >>> 0;
 }
 
-/** Deterministic placeholder profile-view count, always in [100, 200]. */
-export function profileViews(p: { id: string }): number {
+/**
+ * Listings a clinic created itself through the sign-up form (source 'self')
+ * are brand new: nobody has seen them yet, so they show 0 rather than a
+ * placeholder.
+ */
+export function isNewListing(p: { source?: string }): boolean {
+    return p.source === 'self';
+}
+
+/** Deterministic placeholder profile-view count, always in [100, 200]; 0 for new listings. */
+export function profileViews(p: { id: string; source?: string }): number {
+    if (isNewListing(p)) return 0;
     return 100 + (hash(p.id) % 101);
 }

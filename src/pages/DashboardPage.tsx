@@ -79,6 +79,21 @@ export function DashboardPage() {
                 </select>
             )}
 
+            <Link
+                to={`/providers/${clinic.id}`}
+                className="press"
+                style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                    marginBottom: '1.25rem', padding: '0.5rem 0.95rem',
+                    borderRadius: 'var(--radius-pill)', border: '1px solid var(--border)',
+                    background: 'var(--surface)', color: 'var(--white)',
+                    fontSize: '0.85rem', fontWeight: 700,
+                }}
+            >
+                <IconViews size={15} />
+                {t('account.viewPublic')}
+            </Link>
+
             <div
                 role="tablist"
                 style={{
@@ -159,7 +174,7 @@ function Overview({ clinic }: { clinic: Provider }) {
                 {t('account.statsDisclaimer')}
             </p>
 
-            {contacts === 0 && (
+            {contacts === 0 && views > 0 && (
                 <div
                     style={{
                         padding: '1.1rem 1.2rem',

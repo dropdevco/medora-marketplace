@@ -1458,6 +1458,13 @@ select option {
   transition: color 0.18s var(--ease-out);
 }
 .ms-nav-account:hover { color: var(--white); }
+/* Highlighted like the other nav links when you are on the dashboard. */
+.ms-nav-account[aria-current="page"] {
+  padding: 0.45rem 0.95rem;
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+  color: var(--on-brand);
+}
 
 @media (max-width: 700px) {
   .ms-nav-account { display: none; }
