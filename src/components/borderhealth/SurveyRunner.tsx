@@ -4,6 +4,7 @@ import { authButton } from '../account/authStyles';
 import { CONTACT, FOLLOW, FOLLOW_OPTS, FORMS } from './forms';
 import type { ContactField, Opt, Question, Screen } from './forms';
 import { T } from './strings';
+import { RESEARCH } from './research';
 import type { BhStrings } from './strings';
 import { clearDraft, loadDraft, saveDraft } from './storage';
 import type { Answers } from './storage';
@@ -80,8 +81,9 @@ function errText(tt: BhStrings, e: ErrKind): string {
  * submission. Language is owned by the page (it also drives the header
  * switch); everything else lives here.
  */
-export function SurveyRunner({ lang, useUrlSeg, onSubmitted }: {
+export function SurveyRunner({ lang, useUrlSeg, onSubmitted, research = false }: {
     lang: BhLang;
+    research?: boolean;
     /** False after a completed submission, so "fill out another" lands on the chooser. */
     useUrlSeg: boolean;
     onSubmitted: (r: SurveyResult) => void;
@@ -100,7 +102,7 @@ export function SurveyRunner({ lang, useUrlSeg, onSubmitted }: {
      * dropped after success or as soon as any answer changes.
      */
     const submissionKeyRef = useRef<string | null>(null);
-    const tt = T[lang];
+    const tt = research ? { ...T[lang], about: RESEARCH[lang].about } : T[lang];
 
     // Autosave on every change the person makes. The boot state itself is
     // never written (a `?seg=` link must not overwrite someone's draft before

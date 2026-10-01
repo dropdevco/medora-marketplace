@@ -190,3 +190,21 @@ textarea.bh-input { min-height: 7rem; resize: vertical; }
   .bh-screen { animation: none; }
   .bh-bar i { transition: none; }
 }
+
+/* /research: UTEP Mike Loya Center + NSF I-Corps co-branded variant. Logos assume a light page. */
+.bh-research {
+    --navy: #FFFFFF; --white: #14213D;
+    --gray-100: #F3F5F9; --gray-200: #E4E8F0; --gray-300: #C9D0DC; --gray-400: #8A94A6; --gray-500: #5B6577; --gray-600: #434C5E; --gray-700: #2E3647;
+    --brand: #1D3461; --brand-dark: #14254A; --brand-pale: #E6EBF4; --on-brand: #FFFFFF;
+    --accent: #1D3461; --accent-dim: #E6EBF4;
+    --border: #E1E5EC; --border-strong: #C4CBD8;
+    color-scheme: light;
+}
+.bh-research .bh-logos { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; padding: 18px 0 4px; }
+.bh-research .bh-logos .mlcic { height: 32px; width: auto; }
+.bh-research .bh-logos .nsf { height: 38px; width: auto; mix-blend-mode: multiply; padding-left: 18px; border-left: 1px solid var(--border-strong); }
+@media (max-width: 380px) {
+    .bh-research .bh-logos .mlcic { height: 28px; }
+    .bh-research .bh-logos .nsf { height: 32px; }
+}
+.bh-research { padding-top: 0; }

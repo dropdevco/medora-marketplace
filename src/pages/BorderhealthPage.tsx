@@ -7,6 +7,7 @@ import { T } from '../components/borderhealth/strings';
 import { pickLang, saveLang } from '../components/borderhealth/storage';
 import { authButton } from '../components/account/authStyles';
 import { track } from '../components/borderhealth/track';
+import { RESEARCH } from '../components/borderhealth/research';
 import type { BhLang } from '../components/borderhealth/types';
 import '../components/borderhealth/borderhealth.css';
 
@@ -23,7 +24,7 @@ let viewSent = false;
  *
  * "A study conducted by MedSociety" — never Health Atlas, AWS, or AI.
  */
-export function BorderhealthPage() {
+export function BorderhealthPage({ research = false }: { research?: boolean }) {
     const { i18n } = useTranslation();
     const [lang, setLangState] = useState<BhLang>(() => pickLang(window.location.search));
     const [result, setResult] = useState<SurveyResult | null>(null);
@@ -78,9 +79,9 @@ export function BorderhealthPage() {
     // Persist the choice, title the tab, and keep the site navbar in step.
     useEffect(() => {
         saveLang(lang);
-        document.title = T[lang].docTitle;
+        document.title = research ? RESEARCH[lang].docTitle : T[lang].docTitle;
         if (!(i18n.language || '').toLowerCase().startsWith(lang)) void i18n.changeLanguage(lang);
-    }, [lang, i18n]);
+    }, [lang, i18n, research]);
 
     // …and the other way round: a language picked in the navbar moves the survey too.
     useEffect(() => {
@@ -117,7 +118,7 @@ export function BorderhealthPage() {
     }
 
     // Providers continue straight into onboarding with everything they told us.
-    if (result && result.segment === 'provider') {
+    if (!research && result && result.segment === 'provider') {
         return (
             <div className="bh-page">
                 <div className="bh-wrap">
@@ -128,12 +129,19 @@ export function BorderhealthPage() {
     }
 
     return (
-        <div className="bh-page">
+        <div className={research ? 'bh-page bh-research' : 'bh-page'}>
             <div className="bh-wrap">
                 <header className="bh-header">
                     <div className="bh-brand">
-                        <span className="bh-brand-eyebrow">MedSociety</span>
-                        <span className="bh-brand-sub">{listing ? tt.listSub : tt.hsub}</span>
+                        {research ? (
+                            <div className="bh-logos">
+                                <img className="mlcic" src="/research-brand/mlcic.svg" alt="Mike Loya Center for Innovation and Commerce, UTEP" />
+                                <img className="nsf" src="/research-brand/nsf-icorps-southwest.png" alt="NSF I-Corps Hub Southwest" />
+                            </div>
+                        ) : (
+                            <span className="bh-brand-eyebrow">MedSociety</span>
+                        )}
+                        <span className="bh-brand-sub">{research ? RESEARCH[lang].hsub : listing ? tt.listSub : tt.hsub}</span>
                     </div>
                     <div className="bh-lang" role="group" aria-label="Idioma / Language">
                         {(['es', 'en'] as BhLang[]).map((l) => (
@@ -168,13 +176,14 @@ export function BorderhealthPage() {
                         <SurveyRunner
                             key={runKey}
                             lang={lang}
+                            research={research}
                             useUrlSeg={!submittedOnce}
                             onSubmitted={setResult}
                         />
                     )}
                 </main>
 
-                <footer className="bh-foot">{tt.foot}</footer>
+                <footer className="bh-foot">{research ? RESEARCH[lang].foot : tt.foot}</footer>
             </div>
         </div>
     );

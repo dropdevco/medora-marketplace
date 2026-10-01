@@ -1,5 +1,5 @@
 /**
- * Form analytics report for the six /borderhealth forms.
+ * Form analytics report for the six /research forms (and /borderhealth). Every view has a form_slug column.
  *
  *   npx tsx --env-file=.env.local scripts/form-stats.ts            overview + funnels
  *   npx tsx --env-file=.env.local scripts/form-stats.ts daily      per day
@@ -36,7 +36,7 @@ function show(title: string, rows: Record<string, unknown>[]) {
     else console.table(rows);
 }
 
-const FORM_URL = 'https://medsociety.one/borderhealth';
+const FORM_URL = 'https://medsociety.one/research';
 
 async function main() {
     const data: Record<string, unknown> = {};
@@ -45,10 +45,10 @@ async function main() {
         : mode === 'sources' ? [['By source / link', 'form_by_source?order=visits.desc&limit=200']]
         : mode === 'audience' ? [['Audience', 'form_audience?order=visits.desc&limit=200']]
         : mode === 'visitors' ? [['Visitors', 'form_visitors?order=last_seen.desc&limit=500']]
-        : mode === 'events' ? [['Last 50 events', 'form_events?select=created_at,event,form_segment,lang,step_id,ref,country,city,device_type,session,is_bot&order=created_at.desc&limit=50']]
+        : mode === 'events' ? [['Last 50 events', 'form_events?select=created_at,form_slug,event,form_segment,lang,step_id,ref,country,city,device_type,session,is_bot&order=created_at.desc&limit=50']]
         : [
-            ['Per form (the six URLs)', 'form_summary?order=form_segment,lang'],
-            ['Screen-by-screen funnel', 'form_step_funnel?order=form_segment,lang,screen_no'],
+            ['Per form (the six URLs)', 'form_summary?order=form_slug,form_segment,lang'],
+            ['Screen-by-screen funnel', 'form_step_funnel?order=form_slug,form_segment,lang,screen_no'],
         ];
     for (const [title, path] of sets) {
         const rows = await get(path);

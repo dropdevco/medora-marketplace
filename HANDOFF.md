@@ -269,3 +269,6 @@ Tracking: src/components/borderhealth/track.ts -> api/form-event.ts -> table `fo
 Read it: `npx tsx --env-file=.env.local scripts/form-stats.ts [daily|sources|audience|visitors|events]`
 or the views form_summary, form_step_funnel, form_daily, form_by_source, form_audience,
 form_visitors, form_visits in the Supabase SQL editor. Finished submissions stay in `bh_responses`.
+
+### /research (primary study URL)
+`/research?seg=employer|employee|provider&lang=en|es` is the same in-app survey with Mike Loya Center (UTEP) + NSF I-Corps branding and no MedSociety navbar/onboarding. It is fully tracked: every view (`form_summary`, `form_daily`, `form_by_source`, `form_audience`, `form_step_funnel`, `form_visitors`) has a `form_slug` column (`research` vs `borderhealth`), and `bh_responses.form_slug` marks submissions. Migration `0011_form_slug.sql`. The old vercel.json proxy to borderhealth.dropdev.co was removed.

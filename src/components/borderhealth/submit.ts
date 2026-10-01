@@ -90,6 +90,7 @@ export async function insertResponse(f: ResponseFields): Promise<void> {
     const row = {
         submission_key: f.submissionKey,
         session: cut(f.session, 40) || 'live',
+        form_slug: typeof window !== 'undefined' && window.location.pathname.startsWith('/research') ? 'research' : 'borderhealth',
         segment: f.segment,
         lang: f.lang,
         ref: cut(f.ref, 40),

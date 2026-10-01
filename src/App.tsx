@@ -48,6 +48,7 @@ function AppRoutes() {
         {/* The border health study, moved here from borderhealth.dropdev.co.
             Providers who finish it go straight into claiming or listing. */}
         <Route path="/borderhealth" element={<BorderhealthPage />} />
+        <Route path="/research" element={<BorderhealthPage research />} />
         {/*
           /sales was the clinic-facing page and is now /pricing. The old path
           is in sent emails and in the lead rows, so it redirects rather than
@@ -68,10 +69,16 @@ function AppRoutes() {
   );
 }
 
+/** /research is a co-branded study page: no MedSociety navigation on it. */
+function SiteNavbar() {
+  const { pathname } = useLocation();
+  return pathname.startsWith('/research') ? null : <Navbar />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Navbar />
+      <SiteNavbar />
       <AppRoutes />
     </BrowserRouter>
   );
