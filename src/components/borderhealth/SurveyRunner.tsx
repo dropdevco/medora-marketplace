@@ -283,6 +283,15 @@ export function SurveyRunner({ lang, useUrlSeg, onSubmitted, research = false }:
         const session = getSession(search);
         const ref = getRef(search);
         const answers = buildAnswers(seg, a);
+        const qs = new URLSearchParams(window.location.search);
+        const utm: Record<string, string> = {};
+        for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']) {
+            const v = qs.get(k);
+            if (v) utm[k] = v.slice(0, 120);
+        }
+        answers.form_version = 'v2';
+        answers.variant = research ? 'research' : 'medsociety';
+        if (Object.keys(utm).length) answers.utm = utm;
         const industry = (answers.industry || answers.practice_type || null) as string | null;
         const city = (answers.where || answers.work_where || answers.city || null) as string | null;
         const followed = wantsFollow(a);

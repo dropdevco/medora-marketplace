@@ -272,3 +272,6 @@ form_visitors, form_visits in the Supabase SQL editor. Finished submissions stay
 
 ### /research (primary study URL)
 `/research?seg=employer|employee|provider&lang=en|es` is the same in-app survey with Mike Loya Center (UTEP) + NSF I-Corps branding and no MedSociety navbar/onboarding. It is fully tracked: every view (`form_summary`, `form_daily`, `form_by_source`, `form_audience`, `form_step_funnel`, `form_visitors`) has a `form_slug` column (`research` vs `borderhealth`), and `bh_responses.form_slug` marks submissions. Migration `0011_form_slug.sql`. The old vercel.json proxy to borderhealth.dropdev.co was removed.
+
+### UTMs and the employee/patient card
+Native submissions now write `answers.utm`, `answers.form_version = 'v2'` and `answers.variant` (`research`|`medsociety`) into `bh_responses`, so the old per-channel SQL works. `form_visits` / `form_by_source` also carry `utm_medium`, `utm_content`, `utm_term` (migration 0012). The employee card is "Employee or patient" and its industry and work-location questions have a "No trabajo actualmente / I do not currently work" option (key `not_working`).

@@ -60,7 +60,7 @@ export const T: Record<BhLang, BhStrings> = {
         who: '¿Quién responde?',
         segs: {
             employer: ['Empleador', 'Soy dueño, gerente o de recursos humanos'],
-            employee: ['Empleado', 'Trabajo para una empresa u organización'],
+            employee: ['Empleado o paciente', 'Trabajo en una empresa u organización, o busco atención médica'],
             provider: ['Proveedor de salud', 'Soy médico, dentista o administro una clínica o laboratorio'],
         },
         time: 'Sus respuestas se guardan en este dispositivo mientras avanza, por si se corta la señal.',
@@ -95,7 +95,7 @@ export const T: Record<BhLang, BhStrings> = {
         who: 'Who is answering?',
         segs: {
             employer: ['Employer', 'I own or run a business, or handle HR'],
-            employee: ['Employee', 'I work for a company or organization'],
+            employee: ['Employee or patient', 'I work for a company or organization, or I am seeking care'],
             provider: ['Healthcare provider', 'I am a doctor, dentist, or run a clinic or lab'],
         },
         time: 'Your answers are saved on this device as you go, in case the signal drops.',

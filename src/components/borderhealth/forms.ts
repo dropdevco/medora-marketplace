@@ -166,8 +166,10 @@ export const FORMS: Record<BhSegment, Screen[]> = {
 
   employee: [
     sc('you', 'Sobre usted', 'About you', [
-      q('industry', 'single', '¿En qué industria trabaja?', 'What industry do you work in?', INDUSTRY, { required: true, other: true }),
-      q('work_where', 'single', '¿Dónde trabaja?', 'Where do you work?', PLACE, { required: true, other: true }),
+      q('industry', 'single', '¿En qué industria trabaja?', 'What industry do you work in?',
+        [...INDUSTRY, o('not_working', 'No trabajo actualmente', 'I do not currently work')], { required: true, other: true }),
+      q('work_where', 'single', '¿Dónde trabaja?', 'Where do you work?',
+        [...PLACE, o('not_working', 'No trabajo actualmente', 'I do not currently work')], { required: true, other: true }),
       q('live_where', 'single', '¿Dónde vive?', 'Where do you live?', [
         o('juarez', 'Ciudad Juárez', 'Ciudad Juárez'), o('elpaso', 'El Paso', 'El Paso')
       ], { required: true, other: true })
