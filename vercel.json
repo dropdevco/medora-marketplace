@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/research",
+      "destination": "https://borderhealth.dropdev.co/research"
+    },
+    {
+      "source": "/research/:path*",
+      "destination": "https://borderhealth.dropdev.co/research/:path*"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
