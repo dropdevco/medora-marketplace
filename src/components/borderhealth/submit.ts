@@ -126,6 +126,7 @@ export interface LeadBody {
     session: string;
     follow_up: boolean;
     follow_up_key?: string;
+    variant?: 'research' | 'medsociety';
 }
 
 /**
@@ -137,7 +138,7 @@ export function pushLead(body: LeadBody): void {
         fetch('/api/borderhealth-lead', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify(body),
+            body: JSON.stringify({ ...body, variant: window.location.pathname.startsWith('/research') ? 'research' : 'medsociety' }),
         }).catch(() => { /* ignored */ });
     } catch { /* never blocks the thank-you */ }
 }

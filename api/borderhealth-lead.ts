@@ -139,6 +139,7 @@ export default async function handler(req: Req, res: Res) {
     const followUp = b.follow_up === true;
     const followKey = str(b.follow_up_key, 20);
     const whatsapp = str(b.whatsapp, 40);
+    const variant = str(b.variant, 20) === 'research' ? 'research' : 'medsociety';
 
     if (!SEGMENTS.has(segment)) return res.status(400).json({ ok: false, error: 'bad_segment' });
     if (!email && !phone) return res.status(400).json({ ok: false, error: 'no_reach' });
@@ -158,7 +159,7 @@ export default async function handler(req: Req, res: Res) {
             ? ['borderhealth-test']
             : ['borderhealth', `borderhealth-${segment}`, followUp ? 'borderhealth-followup' : 'borderhealth-no-followup'].concat(
                   followKey === 'info_first' ? ['borderhealth-info-first'] : []
-              );
+              ).concat([`borderhealth-v-${variant}`]);
 
     const parts = name.split(' ');
     const contact: GhlContactPayload = {
@@ -169,7 +170,7 @@ export default async function handler(req: Req, res: Res) {
         email: email || undefined,
         phone: phone || undefined,
         companyName: org || undefined,
-        source: 'medsociety.one/borderhealth',
+        source: variant === 'research' ? 'borderhealth research (MLCIC)' : 'medsociety.one/borderhealth',
         tags,
     };
 
