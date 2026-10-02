@@ -208,3 +208,12 @@ textarea.bh-input { min-height: 7rem; resize: vertical; }
     .bh-research .bh-logos .nsf { height: 32px; }
 }
 .bh-research { padding-top: 0; }
+@media (max-width: 560px) {
+    .bh-research .bh-header { flex-wrap: wrap; row-gap: 10px; padding-top: 16px; }
+    .bh-research .bh-brand { flex: 1 1 100%; }
+    .bh-research .bh-logos { flex-wrap: nowrap; gap: 12px; padding-top: 0; }
+    .bh-research .bh-logos .mlcic { height: 26px; }
+    .bh-research .bh-logos .nsf { height: 30px; padding-left: 12px; }
+    .bh-research .bh-brand-sub { margin-top: 8px; }
+    .bh-research .bh-lang { margin-left: auto; }
+}
