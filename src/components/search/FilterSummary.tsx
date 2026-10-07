@@ -13,6 +13,12 @@ interface FilterSummaryProps {
     patchFilters: (patch: Partial<ProviderFilters>) => void;
     resetFilters: () => void;
     count: number;
+    /**
+     * Replaces the "N providers" caption. Used when the keyword search found
+     * nothing but the AI panel answered, where "0 clinics" above a list of
+     * doctors reads as a contradiction.
+     */
+    countLabel?: string;
     activeCount: number;
     /** False when the searched code matches no provider we hold. */
     /**
@@ -37,7 +43,7 @@ interface FilterSummaryProps {
  * so small.
  */
 export function FilterSummary({
-    filters, updateFilter, patchFilters, resetFilters, count, activeCount,
+    filters, updateFilter, patchFilters, resetFilters, count, countLabel, activeCount,
     postalStatus,
     postalChoices,
     onChoosePostal,
@@ -55,12 +61,18 @@ export function FilterSummary({
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 gap: '0.6rem', flexWrap: 'wrap',
             }}>
-                <span style={{ fontSize: '0.88rem', color: 'var(--gray-400)' }}>
-                    <strong style={{ color: 'var(--white)', fontWeight: 800, fontSize: '1.05rem' }}>
-                        {count.toLocaleString()}
-                    </strong>
-                    {' '}{t('filters.providersFoundSuffix', { count })}
-                </span>
+                {countLabel ? (
+                    <span style={{ fontSize: '0.95rem', color: 'var(--white)', fontWeight: 700 }}>
+                        {countLabel}
+                    </span>
+                ) : (
+                    <span style={{ fontSize: '0.88rem', color: 'var(--gray-400)' }}>
+                        <strong style={{ color: 'var(--white)', fontWeight: 800, fontSize: '1.05rem' }}>
+                            {count.toLocaleString()}
+                        </strong>
+                        {' '}{t('filters.providersFoundSuffix', { count })}
+                    </span>
+                )}
 
                 {/* Wraps: on a 375px screen the filters button, the sort select
                     and the view toggle do not fit on one line, and without this

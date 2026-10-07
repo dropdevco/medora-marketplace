@@ -402,6 +402,9 @@ export function SearchPage() {
                                 patchFilters={patchFilters}
                                 resetFilters={resetFilters}
                                 count={providers.length}
+                                countLabel={!loading && providers.length === 0 && aiHasAnswer
+                                    ? (ai.loading ? t('ai.countLoading') : t('ai.countLabel'))
+                                    : undefined}
                                 activeCount={activeCount}
                                 postalStatus={postalStatus}
                                 postalChoices={postalChoices}

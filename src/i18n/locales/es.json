@@ -567,6 +567,8 @@
     "noMatches": "Aún no hay opiniones que describan este problema exacto. Prueba con la especialidad de arriba.",
     "disclaimer": "Sugerencias generadas con IA a partir de opiniones de pacientes; no son consejo médico ni un diagnóstico. Si es urgente, llama al 911.",
     "emergencyTitle": "Esto podría requerir atención urgente",
-    "call911": "Llamar al 911"
+    "call911": "Llamar al 911",
+    "countLabel": "Coincidencias en opiniones de pacientes",
+    "countLoading": "Buscando en opiniones de pacientes…"
   }
 }
