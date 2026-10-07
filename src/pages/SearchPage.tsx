@@ -3,18 +3,21 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useTranslation } from 'react-i18next';
 import { useProviders } from '../hooks/useProviders';
+import { useAiSearch } from '../hooks/useAiSearch';
 import { SearchHero } from '../components/search/SearchHero';
 import { SearchPill } from '../components/search/SearchPill';
 import { CategoryRail } from '../components/search/CategoryRail';
 import { FilterChipRow } from '../components/search/FilterChipRow';
 import { FilterModal } from '../components/search/FilterModal';
 import { FilterSummary } from '../components/search/FilterSummary';
+import { AiMatches } from '../components/search/AiMatches';
 import { ProviderCard } from '../components/provider/ProviderCard';
 import { Discover } from '../components/discover/Discover';
 import { LogoMark } from '../components/brand/Logo';
 import { IconSearch, IconMapPin, IconList } from '../components/icons/Icons';
 import { trackProviderClick } from '../utils/analytics';
 import { distanceKm } from '../utils/geo';
+import { tokenize } from '../utils/search';
 import { countActiveFilters } from '../utils/filters';
 import type { PostalHit } from '../utils/postalGeocode';
 import { buildDiscoverRows } from '../utils/discover';
@@ -66,7 +69,7 @@ function readAutoSearch(): boolean {
 }
 
 export function SearchPage() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const {
@@ -322,6 +325,27 @@ export function SearchPage() {
         return distanceKm(centre.lat, centre.lng, p.lat, p.lng);
     }, [centre]);
 
+    /**
+     * Symptom search runs beside the keyword search, not instead of it.
+     *
+     * It fires for anything that reads like a description ("me duele el oído
+     * desde ayer"), and for any shorter query the keyword engine found nothing
+     * for. Names and specialty words come back from the server as "not a
+     * concern" and render nothing, so a false trigger costs one request.
+     */
+    const termCount = tokenize(filters.search).length;
+    const aiQuery = !loading && (termCount >= 3 || (termCount >= 1 && providers.length === 0))
+        ? filters.search.trim()
+        : null;
+    const ai = useAiSearch(aiQuery, i18n.language?.slice(0, 2) === 'es' ? 'es' : 'en');
+    const aiHasAnswer = ai.loading || !!ai.result?.isConcern;
+
+    const providerById = useMemo(() => new Map(allProviders.map((p) => [p.id, p])), [allProviders]);
+
+    const handleAiSpecialty = useCallback((s: Specialty) => {
+        patchFilters({ search: '', specialty: [s] });
+    }, [patchFilters]);
+
     const hero = (
         <SearchHero
             filters={filters}
@@ -384,6 +408,15 @@ export function SearchPage() {
                                 onChoosePostal={choosePostal}
                             />
 
+                            <AiMatches
+                                result={ai.result}
+                                loading={ai.loading}
+                                providerById={providerById}
+                                onSelect={handleSelect}
+                                onSpecialty={handleAiSpecialty}
+                                distanceOf={distanceOf}
+                            />
+
                             {loading ? (
                                 <div style={{
                                     display: 'flex', flexDirection: 'column',
@@ -402,7 +435,8 @@ export function SearchPage() {
                                     ))}
                                 </div>
                             ) : providers.length === 0 ? (
-                                <EmptyState onClear={resetFilters} />
+                                // The AI panel above is the answer; a "no clinics" box under it reads as a contradiction.
+                                aiHasAnswer ? null : <EmptyState onClear={resetFilters} />
                             ) : (
                                 <div ref={attachList} style={{ marginTop: '0.9rem' }}>
                                     <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>

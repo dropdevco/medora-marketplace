@@ -557,5 +557,16 @@
     "errorNetwork": "Revisa tu conexión e inténtalo de nuevo.",
     "errorTooMany": "Demasiadas solicitudes por ahora. Espera unos minutos e inténtalo de nuevo.",
     "retry": "Reintentar"
+  },
+  "ai": {
+    "title": "Según opiniones de pacientes",
+    "loading": "Leyendo lo que dijeron pacientes con problemas similares…",
+    "seeAll": "Ver todos: {{specialty}}",
+    "helpedSimilar": "Doctores que, según sus pacientes, ayudaron con algo similar",
+    "reviewSource": "Opinión de paciente · Doctoralia",
+    "noMatches": "Aún no hay opiniones que describan este problema exacto. Prueba con la especialidad de arriba.",
+    "disclaimer": "Sugerencias generadas con IA a partir de opiniones de pacientes; no son consejo médico ni un diagnóstico. Si es urgente, llama al 911.",
+    "emergencyTitle": "Esto podría requerir atención urgente",
+    "call911": "Llamar al 911"
   }
 }
