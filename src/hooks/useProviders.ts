@@ -129,6 +129,7 @@ function parseFilters(params: URLSearchParams): ProviderFilters {
 
     return {
         search: params.get('q') ?? '',
+        smart: params.get('smart') === '1',
         specialty: params.getAll('spec').filter((s) => SPECIALTY_KEYS.has(s)) as Specialty[],
         country: params.get('country') === 'MX' || params.get('country') === 'US'
             ? (params.get('country') as 'MX' | 'US')
@@ -186,6 +187,7 @@ function serializeArea(b: MapBox): string {
 function serializeFilters(f: ProviderFilters): URLSearchParams {
     const p = new URLSearchParams();
     if (f.search) p.set('q', f.search);
+    if (f.search && f.smart) p.set('smart', '1');
     for (const s of f.specialty) p.append('spec', s);
     for (const i of f.insurances) p.append('ins', i);
     for (const l of f.languages) p.append('lang', l);
@@ -414,8 +416,11 @@ export function useProviders() {
     const prior = useMemo(() => priorMean(allProviders), [allProviders]);
 
     const ctx: FilterContext = useMemo(
-        () => ({ index: searchIndex, terms: tokenize(filters.search), centre, prior }),
-        [searchIndex, filters.search, centre, prior],
+        // A smart search is a description, not keywords: ANDing every word of
+        // "me duele el oído desde ayer" against names and services matches
+        // nothing. SearchPage narrows the list from the AI answer instead.
+        () => ({ index: searchIndex, terms: filters.smart ? [] : tokenize(filters.search), centre, prior }),
+        [searchIndex, filters.search, filters.smart, centre, prior],
     );
 
     const filtered = useMemo(

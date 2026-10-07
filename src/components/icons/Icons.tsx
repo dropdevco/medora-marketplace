@@ -273,6 +273,16 @@ export function IconReviews(p: IconProps) {
     );
 }
 
+/** Smart (AI) search: one large and one small four-point spark. */
+export function IconSparkle(p: IconProps) {
+    return (
+        <Svg {...p}>
+            <path d="M10 3.5l1.7 4.6a2 2 0 001.2 1.2l4.6 1.7-4.6 1.7a2 2 0 00-1.2 1.2L10 18.5l-1.7-4.6a2 2 0 00-1.2-1.2L2.5 11l4.6-1.7a2 2 0 001.2-1.2z" />
+            <path d="M18.5 15v5M16 17.5h5" />
+        </Svg>
+    );
+}
+
 /** Profile views. */
 export function IconViews(p: IconProps) {
     return (

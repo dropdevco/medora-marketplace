@@ -153,6 +153,12 @@ export interface MapBox {
 
 export interface ProviderFilters {
   search: string;
+  /**
+   * `search` came from the smart search bar: it is a description of a problem
+   * ("me duele el oído"), answered from patient reviews (api/ai-search.ts),
+   * not words to match against names and services.
+   */
+  smart: boolean;
   /** Multi-select: a provider matches if it holds *any* of these. */
   specialty: Specialty[];
   country: Country | '';

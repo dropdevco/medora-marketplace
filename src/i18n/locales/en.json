@@ -569,6 +569,14 @@
     "emergencyTitle": "This may need urgent care",
     "call911": "Call 911",
     "countLabel": "Matches from patient reviews",
-    "countLoading": "Searching patient reviews…"
+    "countLoading": "Searching patient reviews…",
+    "moreIn": "More in {{specialty}} ({{formatted}})"
+  },
+  "smart": {
+    "label": "Smart search",
+    "new": "New",
+    "placeholder": "Describe what you feel, e.g. \"my ear has felt strange since yesterday\"",
+    "hint": "Tell us your problem in your own words. We match it with what patients said about doctors who helped them with something similar.",
+    "submit": "Search"
   }
 }

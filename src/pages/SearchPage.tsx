@@ -11,6 +11,7 @@ import { FilterChipRow } from '../components/search/FilterChipRow';
 import { FilterModal } from '../components/search/FilterModal';
 import { FilterSummary } from '../components/search/FilterSummary';
 import { AiMatches } from '../components/search/AiMatches';
+import { SmartSearchBar } from '../components/search/SmartSearchBar';
 import { ProviderCard } from '../components/provider/ProviderCard';
 import { Discover } from '../components/discover/Discover';
 import { LogoMark } from '../components/brand/Logo';
@@ -73,10 +74,41 @@ export function SearchPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const {
-        providers, allProviders, filters, updateFilter, patchFilters, resetFilters,
+        providers: matched, allProviders, filters, updateFilter, patchFilters, resetFilters,
         facets, vocabulary, loading,
         knownPostalCodes, centre, postalPending, postalChoices,
     } = useProviders();
+
+    /**
+     * Symptom search runs beside the keyword search, not instead of it.
+     *
+     * From the smart bar it always runs. From the ordinary box it fires for
+     * anything that reads like a description ("me duele el oído desde ayer"),
+     * and for any shorter query the keyword engine found nothing for. Names and
+     * specialty words come back from the server as "not a concern" and render
+     * nothing, so a false trigger costs one request.
+     */
+    const termCount = tokenize(filters.search).length;
+    const aiQuery = filters.smart
+        ? (filters.search.trim().length >= 3 ? filters.search.trim() : null)
+        : !loading && (termCount >= 3 || (termCount >= 1 && matched.length === 0))
+            ? filters.search.trim()
+            : null;
+    const ai = useAiSearch(aiQuery, i18n.language?.slice(0, 2) === 'es' ? 'es' : 'en');
+    const aiHasAnswer = ai.loading || !!ai.result?.isConcern;
+    const aiSpecialty = ai.result?.specialty ?? null;
+
+    /**
+     * What the list and the map show. A smart search ignores the text (see
+     * useProviders), so on its own it would list the whole directory; it lists
+     * the specialty the answer pointed to instead, and nothing until it has one.
+     */
+    const providers = useMemo(() => {
+        if (!filters.smart) return matched;
+        return aiSpecialty ? matched.filter((p) => p.specialty.includes(aiSpecialty)) : [];
+    }, [filters.smart, matched, aiSpecialty]);
+
+    const providerById = useMemo(() => new Map(allProviders.map((p) => [p.id, p])), [allProviders]);
 
     const activeCount = countActiveFilters(filters);
     const searching = filters.search !== '' || activeCount > 0;
@@ -325,33 +357,22 @@ export function SearchPage() {
         return distanceKm(centre.lat, centre.lng, p.lat, p.lng);
     }, [centre]);
 
-    /**
-     * Symptom search runs beside the keyword search, not instead of it.
-     *
-     * It fires for anything that reads like a description ("me duele el oído
-     * desde ayer"), and for any shorter query the keyword engine found nothing
-     * for. Names and specialty words come back from the server as "not a
-     * concern" and render nothing, so a false trigger costs one request.
-     */
-    const termCount = tokenize(filters.search).length;
-    const aiQuery = !loading && (termCount >= 3 || (termCount >= 1 && providers.length === 0))
-        ? filters.search.trim()
-        : null;
-    const ai = useAiSearch(aiQuery, i18n.language?.slice(0, 2) === 'es' ? 'es' : 'en');
-    const aiHasAnswer = ai.loading || !!ai.result?.isConcern;
-
-    const providerById = useMemo(() => new Map(allProviders.map((p) => [p.id, p])), [allProviders]);
-
     const handleAiSpecialty = useCallback((s: Specialty) => {
-        patchFilters({ search: '', specialty: [s] });
+        patchFilters({ search: '', smart: false, specialty: [s] });
     }, [patchFilters]);
+
+    const runSmartSearch = useCallback((text: string) => {
+        runSearch({ search: text, smart: true, specialty: [] });
+    }, [runSearch]);
 
     const hero = (
         <SearchHero
             filters={filters}
             vocabulary={vocabulary}
             insurers={insurers}
-            onSubmit={runSearch}
+            // The segmented box always means keywords, even when it is
+            // refining a search that started in the smart bar.
+            onSubmit={(patch) => runSearch({ ...patch, smart: false })}
             onProvider={handleProviderSuggestion}
             autoFocus={heroOpen}
         />
@@ -364,7 +385,11 @@ export function SearchPage() {
                     {/* ── Results toolbar ── */}
                     <div ref={attachBand} className="ms-band" style={{ top: NAV_HEIGHT }}>
                         <div className="ms-band-inner">
-                            {heroOpen ? hero : (
+                            {heroOpen ? hero : filters.smart ? (
+                                <div className="ms-band-pill">
+                                    <SmartSearchBar compact initial={filters.search} onSubmit={runSmartSearch} />
+                                </div>
+                            ) : (
                                 <div className="ms-band-pill">
                                     <SearchPill filters={filters} onExpand={() => setHeroOpen(true)} />
                                 </div>
@@ -402,7 +427,7 @@ export function SearchPage() {
                                 patchFilters={patchFilters}
                                 resetFilters={resetFilters}
                                 count={providers.length}
-                                countLabel={!loading && providers.length === 0 && aiHasAnswer
+                                countLabel={!loading && (filters.smart || providers.length === 0) && aiHasAnswer
                                     ? (ai.loading ? t('ai.countLoading') : t('ai.countLabel'))
                                     : undefined}
                                 activeCount={activeCount}
@@ -419,6 +444,15 @@ export function SearchPage() {
                                 onSpecialty={handleAiSpecialty}
                                 distanceOf={distanceOf}
                             />
+
+                            {filters.smart && aiSpecialty && providers.length > 0 && (
+                                <p style={{ margin: '1.25rem 0 0', fontSize: '0.95rem', fontWeight: 700, color: 'var(--white)' }}>
+                                    {t('ai.moreIn', {
+                                        specialty: t(`specialties.${aiSpecialty}`, { defaultValue: aiSpecialty }),
+                                        formatted: providers.length.toLocaleString(),
+                                    })}
+                                </p>
+                            )}
 
                             {loading ? (
                                 <div style={{
@@ -539,6 +573,7 @@ export function SearchPage() {
                             <p className="ms-hero-sub">{t('discover.heroSubtitle')}</p>
                         </div>
                         {hero}
+                        <SmartSearchBar onSubmit={runSmartSearch} />
                     </section>
 
                     <div className="ms-cats-band">

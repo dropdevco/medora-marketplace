@@ -6,6 +6,7 @@ import { shrunkScore, isRated } from './rating';
 
 export const defaultFilters: ProviderFilters = {
     search: '',
+    smart: false,
     specialty: [],
     country: '',
     minRating: 0,

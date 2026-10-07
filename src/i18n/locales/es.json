@@ -569,6 +569,14 @@
     "emergencyTitle": "Esto podría requerir atención urgente",
     "call911": "Llamar al 911",
     "countLabel": "Coincidencias en opiniones de pacientes",
-    "countLoading": "Buscando en opiniones de pacientes…"
+    "countLoading": "Buscando en opiniones de pacientes…",
+    "moreIn": "Más en {{specialty}} ({{formatted}})"
+  },
+  "smart": {
+    "label": "Búsqueda inteligente",
+    "new": "Nuevo",
+    "placeholder": "Describe lo que sientes, ej. \"siento raro el oído desde ayer\"",
+    "hint": "Cuéntanos tu problema con tus palabras. Lo comparamos con lo que dijeron pacientes de doctores que los ayudaron con algo similar.",
+    "submit": "Buscar"
   }
 }
