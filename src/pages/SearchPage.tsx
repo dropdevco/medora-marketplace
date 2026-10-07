@@ -12,6 +12,7 @@ import { FilterModal } from '../components/search/FilterModal';
 import { FilterSummary } from '../components/search/FilterSummary';
 import { AiMatches } from '../components/search/AiMatches';
 import { SmartSearchBar } from '../components/search/SmartSearchBar';
+import { SearchModeToggle, type SearchMode } from '../components/search/SearchModeToggle';
 import { ProviderCard } from '../components/provider/ProviderCard';
 import { Discover } from '../components/discover/Discover';
 import { LogoMark } from '../components/brand/Logo';
@@ -127,6 +128,20 @@ export function SearchPage() {
     const [autoSearch, setAutoSearch] = useState(readAutoSearch);
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [heroOpen, setHeroOpen] = useState(false);
+    /**
+     * Which box the results toolbar shows. Follows the search that is running
+     * (a smart search opens on the smart bar), and the toggle can flip it
+     * without running anything.
+     */
+    const [barMode, setBarMode] = useState<SearchMode>(filters.smart ? 'smart' : 'regular');
+    /** Set when the toggle, not a page load, chose the mode: only then is focus moved. */
+    const [barToggled, setBarToggled] = useState(false);
+    const [seenSmart, setSeenSmart] = useState(filters.smart);
+    if (filters.smart !== seenSmart) {
+        setSeenSmart(filters.smart);
+        setBarMode(filters.smart ? 'smart' : 'regular');
+        setBarToggled(false);
+    }
     /** The card under the cursor. Forwarded to the map, which lights its pin. */
     const [hoveredId, setHoveredId] = useState<string | null>(null);
     /** The pin under the cursor. The return leg: lights the matching card. */
@@ -365,9 +380,19 @@ export function SearchPage() {
         runSearch({ search: text, smart: true, specialty: [] });
     }, [runSearch]);
 
+    /**
+     * A smart search's text is a description, not keywords, so the regular box
+     * opens empty rather than pre-filled with it. Memoised: SearchHero resets
+     * its draft whenever it is handed a new filters object.
+     */
+    const heroFilters = useMemo(
+        () => (filters.smart ? { ...filters, search: '' } : filters),
+        [filters],
+    );
+
     const hero = (
         <SearchHero
-            filters={filters}
+            filters={heroFilters}
             vocabulary={vocabulary}
             insurers={insurers}
             // The segmented box always means keywords, even when it is
@@ -385,13 +410,29 @@ export function SearchPage() {
                     {/* ── Results toolbar ── */}
                     <div ref={attachBand} className="ms-band" style={{ top: NAV_HEIGHT }}>
                         <div className="ms-band-inner">
-                            {heroOpen ? hero : filters.smart ? (
+                            <SearchModeToggle
+                                mode={barMode}
+                                onChange={(mode) => {
+                                    setBarMode(mode);
+                                    setBarToggled(true);
+                                    // Switching to the regular search opens the full box, ready to
+                                    // type in; the collapsed pill would need a second tap.
+                                    setHeroOpen(mode === 'regular');
+                                }}
+                            />
+
+                            {barMode === 'smart' ? (
                                 <div className="ms-band-pill">
-                                    <SmartSearchBar compact initial={filters.search} onSubmit={runSmartSearch} />
+                                    <SmartSearchBar
+                                        compact
+                                        autoFocus={barToggled}
+                                        initial={filters.smart ? filters.search : ''}
+                                        onSubmit={runSmartSearch}
+                                    />
                                 </div>
-                            ) : (
+                            ) : heroOpen ? hero : (
                                 <div className="ms-band-pill">
-                                    <SearchPill filters={filters} onExpand={() => setHeroOpen(true)} />
+                                    <SearchPill filters={heroFilters} onExpand={() => setHeroOpen(true)} />
                                 </div>
                             )}
 

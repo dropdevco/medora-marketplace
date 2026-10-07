@@ -8,6 +8,8 @@ interface SmartSearchBarProps {
     onSubmit: (text: string) => void;
     /** Results toolbar: just the box, no label or hint. */
     compact?: boolean;
+    /** Focus the field on mount — used when the toolbar toggle switches to it. */
+    autoFocus?: boolean;
 }
 
 /**
@@ -17,7 +19,7 @@ interface SmartSearchBarProps {
  * kind of doctor, this one for a problem in the patient's own words. One box
  * doing both would leave people guessing which kind of text it wants.
  */
-export function SmartSearchBar({ initial = '', onSubmit, compact }: SmartSearchBarProps) {
+export function SmartSearchBar({ initial = '', onSubmit, compact, autoFocus }: SmartSearchBarProps) {
     const { t } = useTranslation();
     const [text, setText] = useState(initial);
 
@@ -52,6 +54,7 @@ export function SmartSearchBar({ initial = '', onSubmit, compact }: SmartSearchB
                     value={text}
                     maxLength={300}
                     autoComplete="off"
+                    autoFocus={autoFocus}
                     placeholder={t('smart.placeholder')}
                     aria-label={t('smart.label')}
                     onChange={(e) => setText(e.target.value)}

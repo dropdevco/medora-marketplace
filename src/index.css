@@ -599,7 +599,23 @@ select option {
 }
 .ms-smart-btn:disabled { opacity: 0.5; cursor: default; }
 .ms-smart-hint { font-size: 0.8rem; color: var(--gray-400); margin: 0.45rem 0 0 0.9rem; }
-.ms-smart.is-compact { margin-top: 0; }
+.ms-smart.is-compact { margin-top: 0; width: min(680px, 100%); }
+
+/* Regular ⇄ smart, above the toolbar's search box. */
+.ms-mode-toggle {
+  align-self: center;
+  display: inline-flex; gap: 0.2rem; padding: 0.2rem;
+  border: 1px solid var(--border); border-radius: var(--radius-pill);
+  background: var(--surface);
+}
+.ms-mode-toggle button {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.35rem 0.85rem; border-radius: var(--radius-pill);
+  font-size: 0.8rem; font-weight: 700; color: var(--gray-400);
+  background: transparent;
+}
+.ms-mode-toggle button.is-active { background: var(--navy-800); color: var(--white); box-shadow: var(--shadow-sm); }
+.ms-mode-toggle button:last-child.is-active { color: var(--gold); }
 .ms-smart.is-compact .ms-smart-label,
 .ms-smart.is-compact .ms-smart-hint { display: none; }
 

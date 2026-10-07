@@ -577,6 +577,9 @@
     "new": "Nuevo",
     "placeholder": "Describe lo que sientes, ej. \"siento raro el oído desde ayer\"",
     "hint": "Cuéntanos tu problema con tus palabras. Lo comparamos con lo que dijeron pacientes de doctores que los ayudaron con algo similar.",
-    "submit": "Buscar"
+    "submit": "Buscar",
+    "modeLabel": "Tipo de búsqueda",
+    "modeRegular": "Buscar",
+    "modeSmart": "Inteligente"
   }
 }
