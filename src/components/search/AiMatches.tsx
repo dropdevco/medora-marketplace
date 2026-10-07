@@ -90,6 +90,7 @@ export function AiMatches({ result, loading, providerById, onSelect, onSpecialty
                                         “{q.body.length > QUOTE_MAX ? `${q.body.slice(0, QUOTE_MAX).trimEnd()}…` : q.body}”
                                         <span style={{ display: 'block', marginTop: '0.25rem', fontStyle: 'normal', fontSize: '0.75rem', color: 'var(--gray-400)' }}>
                                             {t('ai.reviewSource')}
+                                            {q.translated && q.sourceLang && ` · ${t(`ai.translatedFrom.${q.sourceLang}`)}`}
                                         </span>
                                     </blockquote>
                                 ))}

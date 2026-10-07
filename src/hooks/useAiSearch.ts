@@ -4,6 +4,9 @@ import type { Specialty } from '../types/provider';
 export interface AiQuote {
     reviewId: string;
     body: string;
+    sourceLang: 'es' | 'en' | null;
+    /** `body` is our translation of a review written in `sourceLang`. */
+    translated: boolean;
     rating: number | null;
     outcome: string | null;
 }

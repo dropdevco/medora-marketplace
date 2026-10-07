@@ -16,6 +16,8 @@
  *
  * Quotes are always the review text from the database, selected by index. The
  * model never writes a quote, so it cannot put words in a patient's mouth.
+ * They come in the site's language: the stored translation (migration 0015)
+ * when the review was written in the other one, flagged so the UI can say so.
  *
  * ── Env (server-only) ────────────────────────────────────────────────────────
  *   VITE_SUPABASE_URL (or SUPABASE_URL), SUPABASE_SERVICE_ROLE_KEY, OPENROUTER_API_KEY
@@ -71,6 +73,9 @@ const CACHE_MS = 60 * 60 * 1000;
 export interface AiQuote {
     reviewId: string;
     body: string;
+    /** Language the patient wrote in; differs from the request's when `body` is a translation. */
+    sourceLang: 'es' | 'en' | null;
+    translated: boolean;
     rating: number | null;
     outcome: string | null;
 }
@@ -93,6 +98,9 @@ interface Candidate {
     review_id: string;
     provider_id: string;
     body: string;
+    body_es: string | null;
+    body_en: string | null;
+    source_lang: 'es' | 'en' | null;
     rating: number | null;
     symptoms: string[];
     outcome: string | null;
@@ -147,8 +155,17 @@ Reply with ONLY a JSON object:
 }`;
 }
 
+/** The review in `lang`, falling back to the original while a row is untranslated. */
+function quoteFor(c: Candidate, lang: 'en' | 'es'): Pick<AiQuote, 'body' | 'sourceLang' | 'translated'> {
+    const localized = lang === 'es' ? c.body_es : c.body_en;
+    if (localized && c.source_lang) {
+        return { body: localized, sourceLang: c.source_lang, translated: c.source_lang !== lang };
+    }
+    return { body: c.body, sourceLang: c.source_lang, translated: false };
+}
+
 /** Rank doctors by their kept reviews. Pure, so it can be tested without I/O. */
-export function rankDoctors(kept: Candidate[]): AiDoctor[] {
+export function rankDoctors(kept: Candidate[], lang: 'en' | 'es'): AiDoctor[] {
     const byDoctor = new Map<string, { score: number; quotes: Candidate[] }>();
     for (const c of kept) {
         const entry = byDoctor.get(c.provider_id) ?? { score: 0, quotes: [] };
@@ -166,7 +183,7 @@ export function rankDoctors(kept: Candidate[]): AiDoctor[] {
                 // but it is not the quote we lead with.
                 .sort((a, b) => (OUTCOME_WEIGHT[b.outcome ?? 'unclear'] ?? 1) - (OUTCOME_WEIGHT[a.outcome ?? 'unclear'] ?? 1) || b.similarity - a.similarity)
                 .slice(0, QUOTES_PER_DOCTOR)
-                .map((q) => ({ reviewId: q.review_id, body: q.body, rating: q.rating, outcome: q.outcome })),
+                .map((q) => ({ reviewId: q.review_id, ...quoteFor(q, lang), rating: q.rating, outcome: q.outcome })),
         }));
 }
 
@@ -205,7 +222,7 @@ export async function aiSearch(query: string, lang: 'en' | 'es'): Promise<AiSear
         guidance: clean(parsed.guidance, 400),
         // An emergency gets the 911 line and nothing else to read past it.
         doctors: parsed.is_concern === true && parsed.emergency !== true
-            ? rankDoctors(candidates.filter((_, i) => relevant.has(i)))
+            ? rankDoctors(candidates.filter((_, i) => relevant.has(i)), lang)
             : [],
     };
 }

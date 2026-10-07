@@ -570,6 +570,10 @@
     "call911": "Llamar al 911",
     "countLabel": "Coincidencias en opiniones de pacientes",
     "countLoading": "Buscando en opiniones de pacientes…",
+    "translatedFrom": {
+      "es": "Traducido del español",
+      "en": "Traducido del inglés"
+    },
     "moreIn": "Más en {{specialty}} ({{formatted}})"
   },
   "smart": {

@@ -570,6 +570,10 @@
     "call911": "Call 911",
     "countLabel": "Matches from patient reviews",
     "countLoading": "Searching patient reviews…",
+    "translatedFrom": {
+      "es": "Translated from Spanish",
+      "en": "Translated from English"
+    },
     "moreIn": "More in {{specialty}} ({{formatted}})"
   },
   "smart": {
