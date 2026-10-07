@@ -445,6 +445,36 @@ export function IconPediatrics(p: IconProps) {
     );
 }
 
+/** Neurology: a brain, two hemispheres split by a centre fold. */
+export function IconNeurology(p: IconProps) {
+    return (
+        <Svg {...p}>
+            <path d="M12 5.2a3.2 3.2 0 00-5.6 1.1 3 3 0 00-2.1 4.4 3 3 0 00.9 4.9 3.2 3.2 0 005.2 2.9L12 19z" />
+            <path d="M12 5.2a3.2 3.2 0 015.6 1.1 3 3 0 012.1 4.4 3 3 0 01-.9 4.9 3.2 3.2 0 01-5.2 2.9L12 19z" />
+            <path d="M12 5.2V19M8.4 9.6c1 .2 1.7 1 1.7 2M15.6 9.6c-1 .2-1.7 1-1.7 2" />
+        </Svg>
+    );
+}
+
+/** Ear, nose & throat: an ear. */
+export function IconOtolaryngology(p: IconProps) {
+    return (
+        <Svg {...p}>
+            <path d="M6.6 9.4a5.4 5.4 0 0110.8 0c0 2.4-1.4 3.4-2.4 4.4-.9.9-1 1.7-1 2.7a2.8 2.8 0 01-5.3 1.3" />
+            <path d="M9.4 9.6a2.6 2.6 0 015.2 0c0 1.2-.9 1.6-1.6 2.1" />
+        </Svg>
+    );
+}
+
+/** Orthopedics: a long bone. */
+export function IconOrthopedics(p: IconProps) {
+    return (
+        <Svg {...p}>
+            <path d="M15.6 5.6a2.2 2.2 0 113.1 3.1 2.2 2.2 0 11-3.1 3.1l-3.8 3.8a2.2 2.2 0 11-3.1 3.1 2.2 2.2 0 11-3.1-3.1 2.2 2.2 0 113.1-3.1l3.8-3.8a2.2 2.2 0 113.1-3.1z" />
+        </Svg>
+    );
+}
+
 export function IconCardiology(p: IconProps) {
     return (
         <Svg {...p}>
@@ -512,6 +542,9 @@ const SPECIALTY_ICONS: Record<string, IconComponent> = {
     mental_health: IconMentalHealth,
     pharmacy: IconPharmacy,
     telehealth: IconTelehealth,
+    neurology: IconNeurology,
+    otolaryngology: IconOtolaryngology,
+    orthopedics: IconOrthopedics,
 };
 
 /** Renders the icon for a specialty key, falling back to the clinic mark. */

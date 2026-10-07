@@ -29,6 +29,9 @@ export const SPECIALTY_COLORS: Record<string, string> = {
     mental_health: '#7a63c0',
     pharmacy: '#2f8a70',
     telehealth: '#5a7a8f',
+    neurology: '#5b5fb8',
+    otolaryngology: '#2f8f8f',
+    orthopedics: '#8a6a3f',
 };
 
 /** The colour for a specialty key, or the house accent for anything unknown. */

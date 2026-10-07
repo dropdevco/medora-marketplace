@@ -157,7 +157,10 @@
     "urgent_care": "Urgencias",
     "mental_health": "Salud Mental",
     "pharmacy": "Farmacia",
-    "telehealth": "Telemedicina"
+    "telehealth": "Telemedicina",
+    "neurology": "Neurología",
+    "otolaryngology": "Otorrinolaringología",
+    "orthopedics": "Ortopedia y Traumatología"
   },
   "sales": {
     "heroEyebrow": "Para clínicas y consultorios",

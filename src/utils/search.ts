@@ -90,6 +90,13 @@ const SYNONYM_GROUPS: readonly (readonly string[])[] = [
         'ansiedad', 'depresion', 'therapy', 'counseling'],
     ['pharmacy', 'farmacia', 'botica', 'medicamentos', 'drugstore'],
     ['telehealth', 'telemedicina', 'en linea', 'online', 'virtual', 'videoconsulta'],
+    ['neurology', 'neurolog', 'neurocirug', 'neurocirujano', 'neurosurg', 'cerebro', 'brain',
+        'migrana', 'migraine', 'jaqueca', 'cabeza', 'headache', 'epilepsia', 'epilepsy',
+        'convulsion', 'seizure'],
+    ['otolaryngology', 'otorrino', 'otorrinolaringolog', 'oido', 'oidos', 'garganta', 'throat',
+        'nariz', 'sinusitis', 'amigdalas', 'tonsils', 'audiolog', 'hearing', 'sordera'],
+    ['orthopedics', 'ortoped', 'orthoped', 'traumatolog', 'hueso', 'huesos', 'bone', 'fractura',
+        'fracture', 'rodilla', 'knee', 'columna', 'spine', 'cadera'],
 ];
 
 const SYNONYM_LOOKUP = new Map<string, readonly string[]>();

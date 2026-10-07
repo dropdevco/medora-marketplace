@@ -21,11 +21,16 @@ export const SPECIALTY_KEYS: Specialty[] = [
     'general', 'dentist', 'orthodontist', 'pediatrics', 'obgyn', 'cardiology',
     'optometry', 'mental_health', 'physical_therapy', 'plastic_surgery',
     'aesthetician', 'urgent_care', 'pharmacy', 'massage', 'telehealth',
+    'neurology', 'otolaryngology', 'orthopedics',
 ];
 
 /** Free-text keywords, matched against lower-cased, accent-free text. */
 const KEYWORDS: [RegExp, Specialty][] = [
-    [/\borto|orthodon/, 'orthodontist'],
+    // Before orthodontist: "ortopedia" also starts with "orto".
+    [/ortoped|orthoped|traumat/, 'orthopedics'],
+    [/\borto(?!ped)|orthodon/, 'orthodontist'],
+    [/neuro/, 'neurology'],
+    [/otorrino|otolaryng|\bent\b|audiol|foniat/, 'otolaryngology'],
     [/dent|odont|endodon|periodon|implant/, 'dentist'],
     [/plastic|plastica|reconstruct/, 'plastic_surgery'],
     [/estetic|aesthet|esthet|dermat|cosmet/, 'aesthetician'],

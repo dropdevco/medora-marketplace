@@ -2,8 +2,10 @@ import type { Specialty } from '../../src/types/provider';
 
 /**
  * Every Doctoralia specialty slug that has a Ciudad Juárez landing page (86 as
- * of the sitemap read on 2026-08-25), mapped onto the 15-value `Specialty`
- * union in src/types/provider.ts.
+ * of the sitemap read on 2026-08-25), mapped onto the `Specialty` union in
+ * src/types/provider.ts. Neurology, ENT and orthopedics were added later
+ * (they used to fall into 'general'); the rows already loaded were re-tagged
+ * by supabase/migrations/0019_new_specialties.sql.
  *
  * `Provider.specialty` is an array, so sub-specialties can carry two tags —
  * `cardiologo-pediatrico` is both cardiology and pediatrics, and a patient
@@ -53,7 +55,7 @@ export const SPECIALTY_MAP: Record<string, Specialty[]> = {
   'gastroenterologo-pediatrico': ['pediatrics'],
   'hematologo-pediatra': ['pediatrics'],
   'nefrologo-pediatra': ['pediatrics'],
-  'neurologo-infantil': ['pediatrics'],
+  'neurologo-infantil': ['neurology', 'pediatrics'],
   'cardiologo-pediatrico': ['cardiology', 'pediatrics'],
 
   // Cardiology & vascular
@@ -96,15 +98,15 @@ export const SPECIALTY_MAP: Record<string, Specialty[]> = {
   algologo: ['general'],
   nefrologo: ['general'],
   neumologo: ['general'],
-  neurologo: ['general'],
-  neurocirujano: ['general'],
-  neurofisiologo: ['general'],
-  otorrinolaringologo: ['general'],
+  neurologo: ['neurology'],
+  neurocirujano: ['neurology'],
+  neurofisiologo: ['neurology'],
+  otorrinolaringologo: ['otolaryngology'],
   reumatologo: ['general'],
   urologo: ['general'],
   proctologo: ['general'],
-  traumatologo: ['general'],
-  ortopedista: ['general'],
+  traumatologo: ['orthopedics'],
+  ortopedista: ['orthopedics'],
   'cirujano-general': ['general'],
   'cirujano-bariatra': ['general'],
   'cirujano-oncologo': ['general'],
@@ -114,8 +116,8 @@ export const SPECIALTY_MAP: Record<string, Specialty[]> = {
   radiologo: ['general'],
   anestesiologo: ['general'],
   anatomopatologo: ['general'],
-  audiologo: ['general'],
-  foniatra: ['general'],
+  audiologo: ['otolaryngology'],
+  foniatra: ['otolaryngology'],
   genetista: ['general'],
   endoscopista: ['general'],
 

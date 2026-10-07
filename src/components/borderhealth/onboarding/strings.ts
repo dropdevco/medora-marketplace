@@ -251,6 +251,9 @@ const es: Strings = {
         mental_health: 'Salud mental',
         pharmacy: 'Farmacia',
         telehealth: 'Telemedicina',
+        neurology: 'Neurología',
+        otolaryngology: 'Otorrinolaringología',
+        orthopedics: 'Ortopedia y traumatología',
     },
 };
 
@@ -386,6 +389,9 @@ const en: Strings = {
         mental_health: 'Mental health',
         pharmacy: 'Pharmacy',
         telehealth: 'Telehealth',
+        neurology: 'Neurology',
+        otolaryngology: 'Ear, nose & throat',
+        orthopedics: 'Orthopedics & trauma',
     },
 };
 

@@ -41,7 +41,7 @@ const QUOTES_PER_DOCTOR = 2;
 const SPECIALTIES = [
     'dentist', 'orthodontist', 'plastic_surgery', 'aesthetician', 'obgyn', 'physical_therapy',
     'massage', 'optometry', 'general', 'pediatrics', 'cardiology', 'urgent_care',
-    'mental_health', 'pharmacy', 'telehealth',
+    'mental_health', 'pharmacy', 'telehealth', 'neurology', 'otolaryngology', 'orthopedics',
 ] as const;
 
 const OUTCOME_WEIGHT: Record<string, number> = { resolved: 1.3, improved: 1.15, unclear: 1, not_helped: 0.4 };

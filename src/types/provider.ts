@@ -17,7 +17,10 @@ export type Specialty =
   | 'urgent_care'
   | 'mental_health'
   | 'pharmacy'
-  | 'telehealth';
+  | 'telehealth'
+  | 'neurology'
+  | 'otolaryngology'
+  | 'orthopedics';
 
 export const SpecialtyLabels: Record<Specialty, string> = {
   dentist: 'Dentist',
@@ -35,6 +38,9 @@ export const SpecialtyLabels: Record<Specialty, string> = {
   mental_health: 'Mental Health',
   pharmacy: 'Pharmacy',
   telehealth: 'Telehealth',
+  neurology: 'Neurology',
+  otolaryngology: 'Ear, Nose & Throat',
+  orthopedics: 'Orthopedics',
 };
 
 /** One published service, as scraped from a Doctoralia profile. */
