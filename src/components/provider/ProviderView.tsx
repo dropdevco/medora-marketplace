@@ -12,6 +12,8 @@ import { ClinicPhotos } from './ClinicPhotos';
 import { InsuranceList } from './InsuranceList';
 import { ServiceList } from './ServiceList';
 import { InquiryForm } from './InquiryForm';
+import { DoctorAnswers } from '../forum/ForumPromos';
+import { FORUMS_LISTED } from '../../lib/forumRoutes';
 import { useOwnerPhotos } from '../../hooks/useOwnerPhotos';
 import {
     IconStar, IconMapPin, IconPhone, IconLanguage,
@@ -151,6 +153,8 @@ export function ProviderView({ provider, titleId }: { provider: Provider; titleI
                         <ServiceList services={provider.services ?? []} collapsible={false} />
 
                         <ReviewCarousel reviews={reviews} loading={reviewsLoading} />
+
+                        {FORUMS_LISTED && <DoctorAnswers providerId={provider.id} />}
 
                         {provider.tier === 'basic' && (
                             <Link

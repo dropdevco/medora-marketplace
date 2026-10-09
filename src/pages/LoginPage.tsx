@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { signIn, signUp } from '../lib/auth';
 import { useSession } from '../hooks/useSession';
+import { FORUM_PATH } from '../lib/forumRoutes';
 import { IconArrowRight, IconCheck } from '../components/icons/Icons';
 import { AuthShell, Field } from '../components/account/AuthShell';
 import { authButton } from '../components/account/authStyles';
@@ -45,7 +46,9 @@ export function LoginPage() {
 
         const result = mode === 'in'
             ? await signIn(email, password)
-            : await signUp(email, password);
+            // The confirmation link returns them to where they were going (a
+            // patient asking a question, not the clinic dashboard).
+            : await signUp(email, password, `${window.location.origin}${next}`);
 
         setBusy(false);
 
@@ -78,7 +81,9 @@ export function LoginPage() {
     return (
         <AuthShell
             title={mode === 'in' ? t('account.signInTitle') : t('account.signUpTitle')}
-            subtitle={mode === 'in' ? t('account.signInBody') : t('account.signUpBody')}
+            subtitle={next.startsWith(FORUM_PATH.patients)
+                ? t('account.communityBody')
+                : mode === 'in' ? t('account.signInBody') : t('account.signUpBody')}
         >
             <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <Field label={t('account.email')}>

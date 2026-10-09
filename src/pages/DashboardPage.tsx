@@ -14,6 +14,8 @@ import { ClinicPlanPanel } from '../components/account/ClinicPlanPanel';
 import { ClinicAvatar } from '../components/account/ClinicAvatar';
 import { ProfileCompleteness } from '../components/account/ProfileCompleteness';
 import { ToastProvider } from '../components/account/ToastProvider';
+import { ForumDashCard } from '../components/forum/ForumPromos';
+import { FORUMS_LISTED } from '../lib/forumRoutes';
 import type { CompletenessTarget } from '../utils/profileCompleteness';
 import { IconViews, IconClipboard, IconStar } from '../components/icons/Icons';
 
@@ -225,6 +227,7 @@ function Overview({ clinic, galleryCount, onGo }: {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <ProfileCompleteness clinic={clinic} galleryCount={galleryCount} onGo={onGo} />
+            {FORUMS_LISTED && <ForumDashCard specialties={clinic.specialty ?? []} />}
             <div
                 style={{
                     display: 'grid',

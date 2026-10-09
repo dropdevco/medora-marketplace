@@ -7,6 +7,9 @@ import { ClaimPage } from './pages/ClaimPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProviderPage } from './pages/ProviderPage';
 import { BorderhealthPage } from './pages/BorderhealthPage';
+import { ForumPage } from './pages/ForumPage';
+import { ForumThreadPage } from './pages/ForumThreadPage';
+import { FORUM_PATH } from './lib/forumRoutes';
 import { ProviderModal } from './components/provider/ProviderModal';
 import './index.css';
 
@@ -45,6 +48,13 @@ function AppRoutes() {
         <Route path="/claim/:providerId" element={<ClaimPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/providers/:providerId" element={<ProviderPage />} />
+        {/* The two forums, deployed but unlisted: random paths, no links
+            anywhere (see lib/forumRoutes.ts). Patients ask and clinicians
+            answer; Med Society is clinicians only. */}
+        <Route path={FORUM_PATH.patients} element={<ForumPage forum="patients" />} />
+        <Route path={`${FORUM_PATH.patients}/:threadId`} element={<ForumThreadPage forum="patients" />} />
+        <Route path={FORUM_PATH.society} element={<ForumPage forum="society" />} />
+        <Route path={`${FORUM_PATH.society}/:threadId`} element={<ForumThreadPage forum="society" />} />
         {/* The border health study, moved here from borderhealth.dropdev.co.
             Providers who finish it go straight into claiming or listing. */}
         <Route path="/borderhealth" element={<BorderhealthPage />} />

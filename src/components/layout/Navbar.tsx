@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Logo } from '../brand/Logo';
 import { IconSun, IconMoon, IconLanguage } from '../icons/Icons';
 import { useSession } from '../../hooks/useSession';
+import { useIsClinician } from '../../hooks/useIsClinician';
+import { FORUMS_LISTED, FORUM_PATH } from '../../lib/forumRoutes';
 
 /**
  * Light is the product default. A previously stored preference still wins,
@@ -17,7 +19,9 @@ export function Navbar() {
     const { pathname } = useLocation();
     const { t, i18n } = useTranslation();
     const [theme, setTheme] = useState<string>(initialTheme);
-    const { session } = useSession();
+    const { session, user } = useSession();
+    // Only the (unlisted-until-launch) Med Society link needs this answer.
+    const { isClinician } = useIsClinician(FORUMS_LISTED ? user?.id ?? null : null);
 
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
@@ -51,6 +55,13 @@ export function Navbar() {
             <div className="ms-nav-controls" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                 <div className="ms-nav-links" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                     <NavLink to="/" label={t('nav.findProviders')} active={pathname === '/'} />
+                    {/* Unlisted until the forums launch (lib/forumRoutes.ts). */}
+                    {FORUMS_LISTED && (
+                        <NavLink to={FORUM_PATH.patients} label={t('nav.askDoctor')} active={pathname.startsWith(FORUM_PATH.patients)} />
+                    )}
+                    {FORUMS_LISTED && isClinician && (
+                        <NavLink to={FORUM_PATH.society} label={t('nav.medSociety')} active={pathname.startsWith(FORUM_PATH.society)} />
+                    )}
                 </div>
 
                 {/*
